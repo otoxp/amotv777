@@ -2,19 +2,15 @@
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8" />
-  <title>IPTV Player Responsivo</title>
-  <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
+  <title>IPTV Player</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
   <style>
-    * {
-      box-sizing: border-box;
-    }
-
     body {
       margin: 0;
-      font-family: sans-serif;
       background: #111;
-      color: white;
+      color: #fff;
+      font-family: Arial, sans-serif;
       display: flex;
       flex-direction: column;
       height: 100vh;
@@ -24,51 +20,25 @@
       padding: 10px;
       background: #222;
       display: flex;
-      flex-wrap: wrap;
       gap: 10px;
+      flex-wrap: wrap;
       justify-content: center;
-      align-items: center;
+    }
+
+    input, button {
+      padding: 10px;
+      border-radius: 5px;
+      border: none;
     }
 
     input[type="text"] {
       flex: 1;
       min-width: 200px;
-      padding: 5px;
-      border-radius: 5px;
-      border: none;
     }
 
-    input[type="file"],
     button {
-      padding: 6px 10px;
-      background: #333;
+      background-color: #444;
       color: white;
-      border: none;
-      border-radius: 5px;
-      cursor: pointer;
-    }
-
-    .container {
-      display: flex;
-      flex: 1;
-      flex-direction: row;
-    }
-
-    .sidebar {
-      width: 150px;
-      background: #222;
-      display: flex;
-      flex-direction: column;
-      padding: 10px;
-    }
-
-    .sidebar button {
-      margin: 5px 0;
-      padding: 10px;
-      background: #333;
-      color: white;
-      border: none;
-      border-radius: 5px;
       cursor: pointer;
     }
 
@@ -76,70 +46,19 @@
       flex: 1;
       display: flex;
       flex-direction: column;
-      padding: 10px;
       align-items: center;
+      justify-content: center;
+      padding: 10px;
     }
 
     video {
       width: 100%;
-      max-height: 60vh;
+      max-width: 800px;
       background: black;
-      border-radius: 8px;
+      border-radius: 10px;
     }
 
-    .search-bar {
-      margin-top: 10px;
-      width: 100%;
-      max-width: 400px;
-    }
-
-    .search-bar input {
-      width: 100%;
-      padding: 8px;
-      border-radius: 5px;
-      border: none;
-    }
-
-    .channel-navigator {
-      display: flex;
-      gap: 10px;
-      margin-top: 10px;
-      flex-wrap: wrap;
-      justify-content: center;
-    }
-
-    .channel-navigator button {
-      background: #444;
-      padding: 10px;
-      border-radius: 5px;
-      cursor: pointer;
-      border: none;
-      color: white;
-    }
-
-    /* 📱 Responsivo para mobile */
-    @media (max-width: 768px) {
-      .container {
-        flex-direction: column;
-      }
-
-      .sidebar {
-        flex-direction: row;
-        overflow-x: auto;
-        width: 100%;
-      }
-
-      .sidebar button {
-        flex: 1;
-        margin: 5px;
-        white-space: nowrap;
-      }
-
-      .channel-navigator {
-        justify-content: flex-start;
-        overflow-x: auto;
-      }
-
+    @media (max-width: 600px) {
       video {
         max-height: 40vh;
       }
@@ -147,158 +66,27 @@
   </style>
 </head>
 <body>
-
   <header>
-    <input type="text" id="urlInput" placeholder="Cole a URL da sua lista .m3u">
-    <button onclick="loadFromURL()">Carregar</button>
-    <input type="file" id="fileInput" accept=".m3u,text/plain">
+    <input type="text" id="urlInput" placeholder="Cole o link .m3u8 da sua lista ou canal">
+    <button onclick="playStream()">Tocar</button>
   </header>
 
-  <div class="container">
-    <div class="sidebar" id="groupList"></div>
-
-    <div class="player-container">
-      <video id="player" controls></video>
-
-      <div class="search-bar">
-        <input type="text" id="searchInput" placeholder="Buscar canal..." oninput="filterChannels()">
-      </div>
-
-      <div class="channel-navigator">
-        <button onclick="changeChannel(-1)">Canal Anterior</button>
-        <button onclick="changeChannel(1)">Próximo Canal</button>
-      </div>
-
-      <div class="search-bar">
-        <input type="text" id="searchInput" placeholder="Buscar canal..." oninput="filterChannels()">
-      </div>
-
-      <div class="channel-navigator" id="channelList"></div>
-    </div>
+  <div class="player-container">
+    <video id="video" controls></video>
   </div>
 
   <script>
-    let channels = [];
-    let currentGroup = '';
-    let groupChannels = [];
-    let currentChannelIndex = -1; // índice do canal atual
-    let hls; // manter o HLS global
+    let hls;
 
-    document.getElementById('fileInput').addEventListener('change', function (e) {
-      const file = e.target.files[0];
+    function playStream() {
+      const video = document.getElementById('video');
+      const url = document.getElementById('urlInput').value.trim();
 
-      // Verificando se o arquivo tem a extensão .m3u ou .txt
-      if (file && (file.name.endsWith('.m3u') || file.name.endsWith('.txt'))) {
-        const reader = new FileReader();
-        reader.onload = function () {
-          parseM3U(reader.result);
-        };
-        reader.readAsText(file);
-      } else {
-        alert("Por favor, selecione um arquivo .m3u válido!");
-      }
-    });
-
-    async function loadFromURL() {
-      const url = document.getElementById('urlInput').value;
-      if (!url) return alert("Informe uma URL!");
-      try {
-        const res = await fetch(url);
-        const text = await res.text();
-        parseM3U(text);
-      } catch (err) {
-        alert("Erro ao carregar a lista: " + err);
-      }
-    }
-
-    function parseM3U(content) {
-      const lines = content.split('\n');
-      let current = {};
-      channels = [];
-
-      for (let i = 0; i < lines.length; i++) {
-        const line = lines[i].trim();
-        if (line.startsWith('#EXTINF')) {
-          const groupMatch = line.match(/group-title="(.*?)"/);
-          const nameMatch = line.match(/,(.*)$/);
-          current = {
-            name: nameMatch ? nameMatch[1] : 'Sem nome',
-            group: groupMatch ? groupMatch[1] : 'Sem grupo'
-          };
-        } else if (line.startsWith('http')) {
-          current.url = line;
-          channels.push({ ...current });
-        }
+      if (!url) {
+        alert("Informe a URL do canal (.m3u8)");
+        return;
       }
 
-      renderGroups();
-    }
-
-    function renderGroups() {
-      const groupList = document.getElementById('groupList');
-      const uniqueGroups = [...new Set(channels.map(c => c.group))];
-      groupList.innerHTML = '';
-      uniqueGroups.forEach(group => {
-        const btn = document.createElement('button');
-        btn.textContent = group;
-        btn.onclick = () => {
-          currentGroup = group;
-          renderChannels(group);
-        };
-        groupList.appendChild(btn);
-      });
-
-      if (uniqueGroups.length > 0) {
-        currentGroup = uniqueGroups[0];
-        renderChannels(currentGroup);
-      }
-    }
-
-    function renderChannels(group) {
-      groupChannels = channels.filter(c => c.group === group);
-      document.getElementById('searchInput').value = "";
-      displayChannels(groupChannels);
-    }
-
-    function displayChannels(list) {
-      const channelList = document.getElementById('channelList');
-      channelList.innerHTML = '';
-      list.forEach((channel, index) => {
-        const btn = document.createElement('button');
-        btn.textContent = channel.name;
-        btn.onclick = () => {
-          currentChannelIndex = index;
-          playChannel(channel.url);
-        };
-        channelList.appendChild(btn);
-      });
-    }
-
-    function changeChannel(direction) {
-      if (groupChannels.length === 0) return;
-
-      currentChannelIndex += direction;
-
-      if (currentChannelIndex < 0) {
-        currentChannelIndex = groupChannels.length - 1;
-      } else if (currentChannelIndex >= groupChannels.length) {
-        currentChannelIndex = 0;
-      }
-
-      const channel = groupChannels[currentChannelIndex];
-      playChannel(channel.url);
-    }
-
-    function filterChannels() {
-      const input = document.getElementById('searchInput').value.toLowerCase();
-      const filtered = groupChannels.filter(c => c.name.toLowerCase().includes(input));
-      displayChannels(filtered);
-    }
-
-    function playChannel(url) {
-      const video = document.getElementById('player');
-
-      // Parar vídeo atual e limpar instância HLS anterior
       if (hls) {
         hls.destroy();
         hls = null;
@@ -308,37 +96,22 @@
       video.removeAttribute('src');
       video.load();
 
-      let timeout;
+      let timeout = setTimeout(() => {
+        alert("Erro: canal não carregou após 10 segundos.");
+      }, 10000);
 
       if (Hls.isSupported()) {
         hls = new Hls();
         hls.loadSource(url);
         hls.attachMedia(video);
-
-        timeout = setTimeout(() => {
-          if (video.paused) {
-            hls.destroy();
-            hls = null;
-            alert("Erro: canal não carregou após 10 segundos.");
-          }
-        }, 10000);
-
+        video.play();
         video.onplay = () => clearTimeout(timeout);
       } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
         video.src = url;
         video.play();
-
-        timeout = setTimeout(() => {
-          if (video.paused) {
-            video.pause();
-            video.src = '';
-            alert("Erro: canal não carregou após 10 segundos.");
-          }
-        }, 10000);
-
         video.onplay = () => clearTimeout(timeout);
       } else {
-        alert('Este navegador não suporta HLS.');
+        alert("Este navegador não suporta HLS.");
       }
     }
   </script>
