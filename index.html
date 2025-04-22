@@ -169,24 +169,16 @@
         <button onclick="changeChannel(1)">Próximo Canal</button>
       </div>
 
-      <video id="player" controls></video>
-
-      <div class="search-bar">
-        <input type="text" id="searchInput" placeholder="Buscar canal..." oninput="filterChannels()">
-      </div>
-
       <div class="channel-navigator" id="channelList"></div>
     </div>
   </div>
 
   <script>
     let channels = [];
-let currentGroup = '';
-let groupChannels = [];
-let currentChannelIndex = -1; // índice do canal atual
-let hls; // manter o HLS global
     let currentGroup = '';
     let groupChannels = [];
+    let currentChannelIndex = -1; // índice do canal atual
+    let hls; // manter o HLS global
 
     document.getElementById('fileInput').addEventListener('change', function (e) {
       const file = e.target.files[0];
@@ -259,102 +251,82 @@ let hls; // manter o HLS global
     }
 
     function displayChannels(list) {
-  const channelList = document.getElementById('channelList');
-  channelList.innerHTML = '';
-  list.forEach((channel, index) => {
-    const btn = document.createElement('button');
-    btn.textContent = channel.name;
-    btn.onclick = () => {
-      currentChannelIndex = index;
-      playChannel(channel.url);
-    };
-    channelList.appendChild(btn);
-  });
-}
       const channelList = document.getElementById('channelList');
       channelList.innerHTML = '';
-      list.forEach(channel => {
+      list.forEach((channel, index) => {
         const btn = document.createElement('button');
         btn.textContent = channel.name;
-        btn.onclick = () => playChannel(channel.url);
+        btn.onclick = () => {
+          currentChannelIndex = index;
+          playChannel(channel.url);
+        };
         channelList.appendChild(btn);
       });
     }
 
     function changeChannel(direction) {
-  if (groupChannels.length === 0) return;
+      if (groupChannels.length === 0) return;
 
-  currentChannelIndex += direction;
+      currentChannelIndex += direction;
 
-  if (currentChannelIndex < 0) {
-    currentChannelIndex = groupChannels.length - 1;
-  } else if (currentChannelIndex >= groupChannels.length) {
-    currentChannelIndex = 0;
-  }
+      if (currentChannelIndex < 0) {
+        currentChannelIndex = groupChannels.length - 1;
+      } else if (currentChannelIndex >= groupChannels.length) {
+        currentChannelIndex = 0;
+      }
 
-  const channel = groupChannels[currentChannelIndex];
-  playChannel(channel.url);
-}
+      const channel = groupChannels[currentChannelIndex];
+      playChannel(channel.url);
+    }
 
-function filterChannels() {
+    function filterChannels() {
       const input = document.getElementById('searchInput').value.toLowerCase();
       const filtered = groupChannels.filter(c => c.name.toLowerCase().includes(input));
       displayChannels(filtered);
     }
 
     function playChannel(url) {
-  const video = document.getElementById('player');
+      const video = document.getElementById('player');
 
-  // Parar vídeo atual e limpar instância HLS anterior
-  if (hls) {
-    hls.destroy();
-    hls = null;
-  }
-
-  video.pause();
-  video.removeAttribute('src');
-  video.load();
-
-  let timeout;
-
-  if (Hls.isSupported()) {
-    hls = new Hls();
-    hls.loadSource(url);
-    hls.attachMedia(video);
-
-    timeout = setTimeout(() => {
-      if (video.paused) {
+      // Parar vídeo atual e limpar instância HLS anterior
+      if (hls) {
         hls.destroy();
         hls = null;
-        alert("Erro: canal não carregou após 10 segundos.");
       }
-    }, 10000);
 
-    video.onplay = () => clearTimeout(timeout);
-  } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
-    video.src = url;
-    video.play();
+      video.pause();
+      video.removeAttribute('src');
+      video.load();
 
-    timeout = setTimeout(() => {
-      if (video.paused) {
-        video.pause();
-        video.src = '';
-        alert("Erro: canal não carregou após 10 segundos.");
-      }
-    }, 10000);
+      let timeout;
 
-    video.onplay = () => clearTimeout(timeout);
-  } else {
-    alert('Este navegador não suporta HLS.');
-  }
-}
-      const video = document.getElementById('player');
       if (Hls.isSupported()) {
-        const hls = new Hls();
+        hls = new Hls();
         hls.loadSource(url);
         hls.attachMedia(video);
+
+        timeout = setTimeout(() => {
+          if (video.paused) {
+            hls.destroy();
+            hls = null;
+            alert("Erro: canal não carregou após 10 segundos.");
+          }
+        }, 10000);
+
+        video.onplay = () => clearTimeout(timeout);
       } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
         video.src = url;
+        video.play();
+
+        timeout = setTimeout(() => {
+          if (video.paused) {
+            video.pause();
+            video.src = '';
+            alert("Erro: canal não carregou após 10 segundos.");
+          }
+        }, 10000);
+
+        video.onplay = () => clearTimeout(timeout);
       } else {
         alert('Este navegador não suporta HLS.');
       }
