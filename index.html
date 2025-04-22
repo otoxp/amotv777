@@ -151,7 +151,7 @@
   <header>
     <input type="text" id="urlInput" placeholder="Cole a URL da sua lista .m3u">
     <button onclick="loadFromURL()">Carregar</button>
-    <input type="file" id="fileInput" accept=".m3u">
+    <input type="file" id="fileInput" accept=".m3u,text/plain">
   </header>
 
   <div class="container">
@@ -169,6 +169,10 @@
         <button onclick="changeChannel(1)">Próximo Canal</button>
       </div>
 
+      <div class="search-bar">
+        <input type="text" id="searchInput" placeholder="Buscar canal..." oninput="filterChannels()">
+      </div>
+
       <div class="channel-navigator" id="channelList"></div>
     </div>
   </div>
@@ -182,11 +186,17 @@
 
     document.getElementById('fileInput').addEventListener('change', function (e) {
       const file = e.target.files[0];
-      const reader = new FileReader();
-      reader.onload = function () {
-        parseM3U(reader.result);
-      };
-      reader.readAsText(file);
+
+      // Verificando se o arquivo tem a extensão .m3u ou .txt
+      if (file && (file.name.endsWith('.m3u') || file.name.endsWith('.txt'))) {
+        const reader = new FileReader();
+        reader.onload = function () {
+          parseM3U(reader.result);
+        };
+        reader.readAsText(file);
+      } else {
+        alert("Por favor, selecione um arquivo .m3u válido!");
+      }
     });
 
     async function loadFromURL() {
