@@ -2,15 +2,19 @@
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8" />
-  <title>IPTV Player</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>IPTV Player Responsivo</title>
   <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <style>
+    * {
+      box-sizing: border-box;
+    }
+
     body {
       margin: 0;
+      font-family: sans-serif;
       background: #111;
-      color: #fff;
-      font-family: Arial, sans-serif;
+      color: white;
       display: flex;
       flex-direction: column;
       height: 100vh;
@@ -20,25 +24,51 @@
       padding: 10px;
       background: #222;
       display: flex;
-      gap: 10px;
       flex-wrap: wrap;
+      gap: 10px;
       justify-content: center;
-    }
-
-    input, button {
-      padding: 10px;
-      border-radius: 5px;
-      border: none;
+      align-items: center;
     }
 
     input[type="text"] {
       flex: 1;
       min-width: 200px;
+      padding: 5px;
+      border-radius: 5px;
+      border: none;
     }
 
+    input[type="file"],
     button {
-      background-color: #444;
+      padding: 6px 10px;
+      background: #333;
       color: white;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+
+    .container {
+      display: flex;
+      flex: 1;
+      flex-direction: row;
+    }
+
+    .sidebar {
+      width: 150px;
+      background: #222;
+      display: flex;
+      flex-direction: column;
+      padding: 10px;
+    }
+
+    .sidebar button {
+      margin: 5px 0;
+      padding: 10px;
+      background: #333;
+      color: white;
+      border: none;
+      border-radius: 5px;
       cursor: pointer;
     }
 
@@ -46,19 +76,70 @@
       flex: 1;
       display: flex;
       flex-direction: column;
-      align-items: center;
-      justify-content: center;
       padding: 10px;
+      align-items: center;
     }
 
     video {
       width: 100%;
-      max-width: 800px;
+      max-height: 60vh;
       background: black;
-      border-radius: 10px;
+      border-radius: 8px;
     }
 
-    @media (max-width: 600px) {
+    .search-bar {
+      margin-top: 10px;
+      width: 100%;
+      max-width: 400px;
+    }
+
+    .search-bar input {
+      width: 100%;
+      padding: 8px;
+      border-radius: 5px;
+      border: none;
+    }
+
+    .channel-navigator {
+      display: flex;
+      gap: 10px;
+      margin-top: 10px;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+
+    .channel-navigator button {
+      background: #444;
+      padding: 10px;
+      border-radius: 5px;
+      cursor: pointer;
+      border: none;
+      color: white;
+    }
+
+    /* 📱 Responsivo para mobile */
+    @media (max-width: 768px) {
+      .container {
+        flex-direction: column;
+      }
+
+      .sidebar {
+        flex-direction: row;
+        overflow-x: auto;
+        width: 100%;
+      }
+
+      .sidebar button {
+        flex: 1;
+        margin: 5px;
+        white-space: nowrap;
+      }
+
+      .channel-navigator {
+        justify-content: flex-start;
+        overflow-x: auto;
+      }
+
       video {
         max-height: 40vh;
       }
@@ -66,52 +147,129 @@
   </style>
 </head>
 <body>
+
   <header>
-    <input type="text" id="urlInput" placeholder="Cole o link .m3u8 da sua lista ou canal">
-    <button onclick="playStream()">Tocar</button>
+    <input type="text" id="urlInput" placeholder="Cole a URL da sua lista .m3u">
+    <button onclick="loadFromURL()">Carregar</button>
+    <input type="file" id="fileInput" accept=".m3u">
   </header>
 
-  <div class="player-container">
-    <video id="video" controls></video>
+  <div class="container">
+    <div class="sidebar" id="groupList"></div>
+
+    <div class="player-container">
+      <video id="player" controls></video>
+
+      <div class="search-bar">
+        <input type="text" id="searchInput" placeholder="Buscar canal..." oninput="filterChannels()">
+      </div>
+
+      <div class="channel-navigator" id="channelList"></div>
+    </div>
   </div>
 
   <script>
-    let hls;
+    let channels = [];
+    let currentGroup = '';
+    let groupChannels = [];
 
-    function playStream() {
-      const video = document.getElementById('video');
-      const url = document.getElementById('urlInput').value.trim();
+    document.getElementById('fileInput').addEventListener('change', function (e) {
+      const file = e.target.files[0];
+      const reader = new FileReader();
+      reader.onload = function () {
+        parseM3U(reader.result);
+      };
+      reader.readAsText(file);
+    });
 
-      if (!url) {
-        alert("Informe a URL do canal (.m3u8)");
-        return;
+    async function loadFromURL() {
+      const url = document.getElementById('urlInput').value;
+      if (!url) return alert("Informe uma URL!");
+      try {
+        const res = await fetch(url);
+        const text = await res.text();
+        parseM3U(text);
+      } catch (err) {
+        alert("Erro ao carregar a lista: " + err);
+      }
+    }
+
+    function parseM3U(content) {
+      const lines = content.split('\n');
+      let current = {};
+      channels = [];
+
+      for (let i = 0; i < lines.length; i++) {
+        const line = lines[i].trim();
+        if (line.startsWith('#EXTINF')) {
+          const groupMatch = line.match(/group-title="(.*?)"/);
+          const nameMatch = line.match(/,(.*)$/);
+          current = {
+            name: nameMatch ? nameMatch[1] : 'Sem nome',
+            group: groupMatch ? groupMatch[1] : 'Sem grupo'
+          };
+        } else if (line.startsWith('http')) {
+          current.url = line;
+          channels.push({ ...current });
+        }
       }
 
-      if (hls) {
-        hls.destroy();
-        hls = null;
+      renderGroups();
+    }
+
+    function renderGroups() {
+      const groupList = document.getElementById('groupList');
+      const uniqueGroups = [...new Set(channels.map(c => c.group))];
+      groupList.innerHTML = '';
+      uniqueGroups.forEach(group => {
+        const btn = document.createElement('button');
+        btn.textContent = group;
+        btn.onclick = () => {
+          currentGroup = group;
+          renderChannels(group);
+        };
+        groupList.appendChild(btn);
+      });
+
+      if (uniqueGroups.length > 0) {
+        currentGroup = uniqueGroups[0];
+        renderChannels(currentGroup);
       }
+    }
 
-      video.pause();
-      video.removeAttribute('src');
-      video.load();
+    function renderChannels(group) {
+      groupChannels = channels.filter(c => c.group === group);
+      document.getElementById('searchInput').value = "";
+      displayChannels(groupChannels);
+    }
 
-      let timeout = setTimeout(() => {
-        alert("Erro: canal não carregou após 10 segundos.");
-      }, 10000);
+    function displayChannels(list) {
+      const channelList = document.getElementById('channelList');
+      channelList.innerHTML = '';
+      list.forEach(channel => {
+        const btn = document.createElement('button');
+        btn.textContent = channel.name;
+        btn.onclick = () => playChannel(channel.url);
+        channelList.appendChild(btn);
+      });
+    }
 
+    function filterChannels() {
+      const input = document.getElementById('searchInput').value.toLowerCase();
+      const filtered = groupChannels.filter(c => c.name.toLowerCase().includes(input));
+      displayChannels(filtered);
+    }
+
+    function playChannel(url) {
+      const video = document.getElementById('player');
       if (Hls.isSupported()) {
-        hls = new Hls();
+        const hls = new Hls();
         hls.loadSource(url);
         hls.attachMedia(video);
-        video.play();
-        video.onplay = () => clearTimeout(timeout);
       } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
         video.src = url;
-        video.play();
-        video.onplay = () => clearTimeout(timeout);
       } else {
-        alert("Este navegador não suporta HLS.");
+        alert('Este navegador não suporta HLS.');
       }
     }
   </script>
