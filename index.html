@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
+
 <head>
   <meta charset="UTF-8" />
   <title>IPTV Player Responsivo</title>
@@ -117,7 +118,12 @@
       color: white;
     }
 
-    /* 📱 Responsivo para mobile */
+    .canal-ativo {
+      background: #00cc66 !important;
+      color: black !important;
+      font-weight: bold;
+    }
+
     @media (max-width: 768px) {
       .container {
         flex-direction: column;
@@ -146,8 +152,8 @@
     }
   </style>
 </head>
-<body>
 
+<body>
   <header>
     <input type="text" id="urlInput" placeholder="Cole a URL da sua lista .m3u">
     <button onclick="loadFromURL()">Carregar</button>
@@ -172,6 +178,7 @@
     let channels = [];
     let currentGroup = '';
     let groupChannels = [];
+    let canalAtual = '';
 
     document.getElementById('fileInput').addEventListener('change', function (e) {
       const file = e.target.files[0];
@@ -249,7 +256,11 @@
       list.forEach(channel => {
         const btn = document.createElement('button');
         btn.textContent = channel.name;
+        btn.dataset.url = channel.url;
         btn.onclick = () => playChannel(channel.url);
+        if (channel.url === canalAtual) {
+          btn.classList.add('canal-ativo');
+        }
         channelList.appendChild(btn);
       });
     }
@@ -262,6 +273,13 @@
 
     function playChannel(url) {
       const video = document.getElementById('player');
+      canalAtual = url;
+
+      if (!url.endsWith('.m3u8')) {
+        alert('Este canal não é compatível (formato não suportado). Use .m3u8');
+        return;
+      }
+
       if (Hls.isSupported()) {
         const hls = new Hls();
         hls.loadSource(url);
@@ -271,6 +289,19 @@
       } else {
         alert('Este navegador não suporta HLS.');
       }
+
+      destacarBotaoCanalAtivo();
+    }
+
+    function destacarBotaoCanalAtivo() {
+      const botoes = document.querySelectorAll('#channelList button');
+      botoes.forEach(botao => {
+        if (botao.dataset.url === canalAtual) {
+          botao.classList.add('canal-ativo');
+        } else {
+          botao.classList.remove('canal-ativo');
+        }
+      });
     }
   </script>
 </body>
