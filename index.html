@@ -1,183 +1,144 @@
 
 <!DOCTYPE html>
-<html lang -"pt-BR">
-
+<html lang="pt-BR">
 <head>
   <meta charset="UTF-8">
-  <title>IPTV Web - Player Recorder</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>IPTV Web</title>
   <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
   <style>
-    body { font-family: sans-serif; background: url('https://thumbs.dreamstime.com/z/incredibly-beautiful-sunset-sun-lake-sunrise-landscape-panorama-nature-sky-amazing-colorful-clouds-fantasy-design-115177001.jpg?ct=jpeg') no-repeat center center fixed; 
-      background-size: cover; #118099; color: #eeeeee; text-align: center; }
-    input, button, select { margin: 10px; padding: 10px; font-size: 1rem; }
-    video { width: 90%; max-width: 800px; margin-top: 20px; border: 4px solid #0ce7dc; border-radius: 2px; }
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      background-color: #000;
+      color: #fff;
+    }
+    header {
+      background-color: #111;
+      padding: 10px;
+      text-align: center;
+      font-size: 1.5em;
+    }
+    main {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 10px;
+    }
+    video {
+      width: 90%;
+      max-width: 800px;
+      background: #000;
+    }
+    #controles {
+      margin: 10px 0;
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+    select, input[type="text"], button {
+      padding: 5px;
+      font-size: 1em;
+    }
+    #canal-info {
+      margin-top: 10px;
+      font-size: 1em;
+      color: #0f0;
+    }
   </style>
 </head>
 <body>
-    <h1>IPTV Web Player Recorder</h1>
-    <input type="text" id="playlistUrl" placeholder="Cole o link da lista IPTV">
-  <button onclick="loadPlaylist()">Carregar Lista</button>
+  <header>📺 IPTV Web Player</header>
+  <main>
+    <video id="player" controls></video>
 
-  <select id="channelList">
-    <option value="">Selecione um canal</option>
-  </select>
+    <div id="controles">
+      <select id="grupoSelect"></select>
+      <select id="canalSelect"></select>
+      <input type="text" id="busca" placeholder="🔍 Buscar canal...">
+      <button onclick="tocarCanal()">▶️ Assistir</button>
+      <button onclick="gravarCanal()">⏺ Gravar</button>
+      <button onclick="telaCheia()">🖥️ Tela cheia</button>
+    </div>
 
-  <br>
-  <label>Data:</label>
-  <input type="date" id="recordDate">
-  <label>Início:</label>
-  <input type="time" id="startTime">
-  <label>Fim:</label>
-  <input type="time" id="endTime">
-  <button onclick="scheduleRecording()">📅 Agendar Gravação</button>
+    <div id="canal-info"></div>
+  </main>
 
-  <button onclick="playSelected()">Assistir</button>
-  <button id="recordButton" onclick="toggleRecording()">🔴 Gravar Manualmente</button>
-  <video id="video" controls autoplay></video>
- 
   <script>
-    const channelList = document.getElementById('channelList');
-    const video = document.getElementById('video');
-    const recordButton = document.getElementById('recordButton');
-    let mediaRecorder;
-    let recordedChunks = [];
-    let preLoadTimeout, recordingTimeout, stopTimeout;
+    const listaURL = 'https://tinyurl.com/plamo999';
+    const player = document.getElementById('player');
+    const grupoSelect = document.getElementById('grupoSelect');
+    const canalSelect = document.getElementById('canalSelect');
+    const buscaInput = document.getElementById('busca');
+    const canalInfo = document.getElementById('canal-info');
 
-    function loadPlaylist() {
-      const playlistUrl = document.getElementById('playlistUrl').value;
-      if (!playlistUrl) {
-        alert("Por favor, insira um link da lista IPTV.");
-        return;
+    let canaisPorGrupo = {};
+
+    async function carregarLista() {
+      const resposta = await fetch(listaURL);
+      const texto = await resposta.text();
+      const linhas = texto.split('\n');
+      let grupoAtual = '';
+
+      for (let i = 0; i < linhas.length; i++) {
+        if (linhas[i].startsWith('#EXTINF')) {
+          const grupo = linhas[i].match(/group-title="([^"]+)"/);
+          const nome = linhas[i].split(',').pop();
+          const url = linhas[i + 1];
+
+          if (grupo && nome && url) {
+            grupoAtual = grupo[1];
+            if (!canaisPorGrupo[grupoAtual]) canaisPorGrupo[grupoAtual] = [];
+            canaisPorGrupo[grupoAtual].push({ nome, url });
+          }
+        }
       }
 
-      fetch(playlistUrl)
-        .then(res => res.text())
-        .then(data => {
-          const lines = data.split('\n');
-          channelList.innerHTML = '<option value="">Selecione um canal</option>';
-          let currentName = '';
-
-          lines.forEach(line => {
-            if (line.startsWith('#EXTINF')) {
-              currentName = line.split(',')[1]?.trim() || 'Canal sem nome';
-            } else if (line.startsWith('http')) {
-              const option = document.createElement('option');
-              option.value = line.trim();
-              option.text = currentName;
-              channelList.appendChild(option);
-            }
-          });
-        })
-        .catch(error => alert("Erro ao carregar a lista IPTV."));
+      grupoSelect.innerHTML = Object.keys(canaisPorGrupo).map(g => `<option>${g}</option>`).join('');
+      grupoSelect.onchange = atualizarCanais;
+      buscaInput.oninput = atualizarCanais;
+      atualizarCanais();
     }
 
-    function playSelected() {
-      const url = channelList.value;
-      if (!url) {
-        alert("Selecione um canal.");
-        return;
-      }
+    function atualizarCanais() {
+      const grupo = grupoSelect.value;
+      const busca = buscaInput.value.toLowerCase();
+      const canais = canaisPorGrupo[grupo] || [];
+
+      canalSelect.innerHTML = canais
+        .filter(c => c.nome.toLowerCase().includes(busca))
+        .map(c => `<option value="${c.url}">${c.nome}</option>`) 
+        .join('');
+    }
+
+    function tocarCanal() {
+      const url = canalSelect.value;
+      canalInfo.textContent = 'Reproduzindo: ' + canalSelect.options[canalSelect.selectedIndex].text;
 
       if (Hls.isSupported()) {
         const hls = new Hls();
         hls.loadSource(url);
-        hls.attachMedia(video);
-        hls.on(Hls.Events.MANIFEST_PARSED, () => {
-          video.play();
-        });
-      } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
-        video.src = url;
-        video.play();
+        hls.attachMedia(player);
+        hls.on(Hls.Events.MANIFEST_PARSED, () => player.play());
+      } else if (player.canPlayType('application/vnd.apple.mpegurl')) {
+        player.src = url;
+        player.play();
       } else {
-        alert("Seu navegador não suporta HLS.");
+        alert('Este navegador não suporta HLS. Use Chrome ou Firefox.');
       }
     }
 
-    function toggleRecording() {
-      if (!mediaRecorder) {
-        startRecording();
-      } else {
-        stopRecording();
-      }
+    function telaCheia() {
+      if (player.requestFullscreen) player.requestFullscreen();
+      else if (player.webkitRequestFullscreen) player.webkitRequestFullscreen();
     }
 
-    function startRecording() {
-      const stream = video.captureStream();
-      mediaRecorder = new MediaRecorder(stream);
-      recordedChunks = [];
-
-      mediaRecorder.ondataavailable = event => {
-        if (event.data.size > 0) {
-          recordedChunks.push(event.data);
-        }
-      };
-
-      mediaRecorder.onstop = saveRecording;
-      mediaRecorder.start();
-      recordButton.textContent = "⏹️ Parar Gravação";
+    function gravarCanal() {
+      alert('Função de gravação só pode ser feita via software externo no navegador (ex: OBS).');
     }
 
-    function stopRecording() {
-      if (mediaRecorder) {
-        mediaRecorder.stop();
-        recordButton.textContent = "🔴 Gravar Manualmente";
-      }
-    }
-
-    function saveRecording() {
-      const blob = new Blob(recordedChunks, { type: "video/webm" });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = `gravacao_iptv_${new Date().toISOString().split('T')[0]}.webm`;
-      document.body.appendChild(a);
-      a.click();
-      setTimeout(() => URL.revokeObjectURL(url), 100);
-    }
-
-    function scheduleRecording() {
-      const recordDate = document.getElementById('recordDate').value;
-      const startTime = document.getElementById('startTime').value;
-      const endTime = document.getElementById('endTime').value;
-      const url = channelList.value;
-
-      if (!recordDate || !startTime || !endTime || !url) {
-        alert("Preencha todos os campos e selecione um canal.");
-        return;
-      }
-
-      const now = new Date();
-      const start = new Date(`${recordDate}T${startTime}:00`);
-      const end = new Date(`${recordDate}T${endTime}:00`);
-
-      if (start < now) {
-        alert("A gravação não pode iniciar no passado.");
-        return;
-      }
-
-      const preLoadTime = new Date(start.getTime() - 60 * 1000); // 1 minuto antes da gravação
-      const startDelay = start.getTime() - now.getTime();
-      const preLoadDelay = preLoadTime.getTime() - now.getTime();
-      const endDelay = end.getTime() - now.getTime();
-
-      clearTimeout(preLoadTimeout);
-      clearTimeout(recordingTimeout);
-      clearTimeout(stopTimeout);
-
-      preLoadTimeout = setTimeout(() => {
-        playSelected();
-      }, preLoadDelay);
-
-      recordingTimeout = setTimeout(() => {
-        startRecording();
-      }, startDelay);
-
-      stopTimeout = setTimeout(() => {
-        stopRecording();
-      }, endDelay);
-
-      alert(`Gravação agendada para ${recordDate} das ${startTime} às ${endTime}. O canal será carregado 1 minuto antes.`);
-    }
+    carregarLista();
   </script>
 </body>
 </html>
