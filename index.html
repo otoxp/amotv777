@@ -2,143 +2,265 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>IPTV Web</title>
-  <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
-  <style>
-    body {
-      margin: 0;
-      font-family: Arial, sans-serif;
-      background-color: #000;
-      color: #fff;
-    }
-    header {
-      background-color: #111;
-      padding: 10px;
-      text-align: center;
-      font-size: 1.5em;
-    }
-    main {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      padding: 10px;
-    }
-    video {
-      width: 90%;
-      max-width: 800px;
-      background: #000;
-    }
-    #controles {
-      margin: 10px 0;
-      display: flex;
-      gap: 10px;
-      flex-wrap: wrap;
-      justify-content: center;
-    }
-    select, input[type="text"], button {
-      padding: 5px;
-      font-size: 1em;
-    }
-    #canal-info {
-      margin-top: 10px;
-      font-size: 1em;
-      color: #0f0;
-    }
-  </style>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>IPTV por Grupos - DropDown com Logos</title>
+<style>
+  body {
+    font-family: Arial, sans-serif;
+    margin: 0; padding: 0;
+    background: #111;
+    color: #eee;
+    display: flex;
+    height: 100vh;
+  }
+  #menu {
+    width: 260px;
+    background: #222;
+    overflow-y: auto;
+    border-right: 2px solid #333;
+  }
+  #menu h2 {
+    margin: 15px;
+    font-size: 1.2em;
+    border-bottom: 1px solid #444;
+    padding-bottom: 8px;
+  }
+  #busca {
+    width: 100%;
+    padding: 10px;
+    border: none;
+    background: #111;
+    color: #eee;
+    font-size: 1em;
+    box-sizing: border-box;
+  }
+  .grupo {
+    cursor: pointer;
+    padding: 10px 15px;
+    border-bottom: 1px solid #333;
+    user-select: none;
+    position: relative;
+  }
+  .grupo::after {
+    content: "▸";
+    position: absolute;
+    right: 15px;
+    transition: transform 0.2s ease;
+  }
+  .grupo:hover {
+    background: #444;
+  }
+  .grupo.active {
+    background: #0055aa;
+  }
+  .grupo.active::after {
+    content: "▾";
+  }
+  .canais {
+    display: none;
+    background: #222;
+  }
+  .canais a {
+    display: flex;
+    align-items: center;
+    padding: 8px 15px;
+    color: #ccc;
+    text-decoration: none;
+    border-bottom: 1px solid #333;
+    font-size: 0.9em;
+  }
+  .canais a:hover {
+    background: #0055aa;
+    color: #fff;
+  }
+  .canais img {
+    width: 26px;
+    height: 16px;
+    object-fit: contain;
+    margin-right: 10px;
+    border: 1px solid #444;
+    background: #000;
+  }
+  #player-section {
+    flex: 1;
+    background: #000;
+    display: flex;
+    flex-direction: column;
+  }
+  #player-title {
+    padding: 12px;
+    background: #111;
+    font-size: 1.1em;
+    border-bottom: 1px solid #333;
+    text-align: center;
+  }
+  video {
+    flex: 1;
+    width: 100%;
+    background: black;
+  }
+</style>
+<script src="https://cdn.jsdelivr.net/npm/hls.js@1.4.0/dist/hls.min.js"></script>
 </head>
 <body>
-  <header>📺 IPTV Web Player</header>
-  <main>
-    <video id="player" controls></video>
 
-    <div id="controles">
-      <select id="grupoSelect"></select>
-      <select id="canalSelect"></select>
-      <input type="text" id="busca" placeholder="🔍 Buscar canal...">
-      <button onclick="tocarCanal()">▶️ Assistir</button>
-      <button onclick="gravarCanal()">⏺ Gravar</button>
-      <button onclick="telaCheia()">🖥️ Tela cheia</button>
-    </div>
+<div id="menu">
+  <h2>Grupos IPTV</h2>
+  <input type="text" id="busca" placeholder="Buscar canal..." />
+  <div id="grupos-container"></div>
+</div>
 
-    <div id="canal-info"></div>
-  </main>
+<div id="player-section">
+  <div id="player-title">Selecione um canal para assistir</div>
+  <video id="video" controls></video>
+</div>
 
-  <script>
-    const listaURL = 'https://tinyurl.com/plamo999';
-    const player = document.getElementById('player');
-    const grupoSelect = document.getElementById('grupoSelect');
-    const canalSelect = document.getElementById('canalSelect');
-    const buscaInput = document.getElementById('busca');
-    const canalInfo = document.getElementById('canal-info');
+<script>
+// Função para buscar e processar a lista IPTV
+async function carregarLista(url) {
+  const res = await fetch(url);
+  const text = await res.text();
+  return text;
+}
 
-    let canaisPorGrupo = {};
+// Parse m3u para JSON por grupo
+function parseM3U(text) {
+  const lines = text.split('\n');
+  const grupos = {};
+  let currentGrupo = "Sem Grupo";
 
-    async function carregarLista() {
-      const resposta = await fetch(listaURL);
-      const texto = await resposta.text();
-      const linhas = texto.split('\n');
-      let grupoAtual = '';
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i].trim();
+    if (line.startsWith('#EXTINF:')) {
+      const groupMatch = line.match(/group-title="([^"]+)"/i);
+      currentGrupo = groupMatch ? groupMatch[1] : "Sem Grupo";
 
-      for (let i = 0; i < linhas.length; i++) {
-        if (linhas[i].startsWith('#EXTINF')) {
-          const grupo = linhas[i].match(/group-title="([^"]+)"/);
-          const nome = linhas[i].split(',').pop();
-          const url = linhas[i + 1];
+      const logoMatch = line.match(/tvg-logo="([^"]+)"/i);
+      const logo = logoMatch ? logoMatch[1] : null;
 
-          if (grupo && nome && url) {
-            grupoAtual = grupo[1];
-            if (!canaisPorGrupo[grupoAtual]) canaisPorGrupo[grupoAtual] = [];
-            canaisPorGrupo[grupoAtual].push({ nome, url });
-          }
-        }
+      const nameMatch = line.match(/,(.*)$/);
+      const nomeCanal = nameMatch ? nameMatch[1] : "Sem Nome";
+
+      const urlCanal = lines[i+1] ? lines[i+1].trim() : null;
+
+      if(urlCanal && !urlCanal.startsWith('#')) {
+        if(!grupos[currentGrupo]) grupos[currentGrupo] = [];
+        grupos[currentGrupo].push({nome: nomeCanal, url: urlCanal, logo: logo});
+      }
+    }
+  }
+  return grupos;
+}
+
+// Monta o menu com grupos e canais
+function montarMenu(grupos) {
+  const container = document.getElementById('grupos-container');
+  container.innerHTML = '';
+
+  Object.entries(grupos).forEach(([grupoNome, canais]) => {
+    const grupoDiv = document.createElement('div');
+    grupoDiv.classList.add('grupo');
+    grupoDiv.textContent = grupoNome;
+
+    const canaisDiv = document.createElement('div');
+    canaisDiv.classList.add('canais');
+
+    canais.forEach(canal => {
+      const a = document.createElement('a');
+      a.href = "#";
+      a.title = canal.nome;
+      a.dataset.nome = canal.nome.toLowerCase();
+      a.addEventListener('click', (e) => {
+        e.preventDefault();
+        tocarCanal(canal.url, canal.nome);
+      });
+
+      if(canal.logo){
+        const img = document.createElement('img');
+        img.src = canal.logo;
+        img.alt = canal.nome + ' logo';
+        a.appendChild(img);
       }
 
-      grupoSelect.innerHTML = Object.keys(canaisPorGrupo).map(g => `<option>${g}</option>`).join('');
-      grupoSelect.onchange = atualizarCanais;
-      buscaInput.oninput = atualizarCanais;
-      atualizarCanais();
-    }
+      const spanNome = document.createElement('span');
+      spanNome.textContent = canal.nome;
+      a.appendChild(spanNome);
 
-    function atualizarCanais() {
-      const grupo = grupoSelect.value;
-      const busca = buscaInput.value.toLowerCase();
-      const canais = canaisPorGrupo[grupo] || [];
+      canaisDiv.appendChild(a);
+    });
 
-      canalSelect.innerHTML = canais
-        .filter(c => c.nome.toLowerCase().includes(busca))
-        .map(c => `<option value="${c.url}">${c.nome}</option>`) 
-        .join('');
-    }
+    grupoDiv.addEventListener('click', () => {
+      const isActive = grupoDiv.classList.contains('active');
+      document.querySelectorAll('.grupo').forEach(g => g.classList.remove('active'));
+      document.querySelectorAll('.canais').forEach(c => c.style.display = 'none');
 
-    function tocarCanal() {
-      const url = canalSelect.value;
-      canalInfo.textContent = 'Reproduzindo: ' + canalSelect.options[canalSelect.selectedIndex].text;
-
-      if (Hls.isSupported()) {
-        const hls = new Hls();
-        hls.loadSource(url);
-        hls.attachMedia(player);
-        hls.on(Hls.Events.MANIFEST_PARSED, () => player.play());
-      } else if (player.canPlayType('application/vnd.apple.mpegurl')) {
-        player.src = url;
-        player.play();
+      if(!isActive) {
+        grupoDiv.classList.add('active');
+        canaisDiv.style.display = 'block';
+        localStorage.setItem('grupoAtivo', grupoNome);
       } else {
-        alert('Este navegador não suporta HLS. Use Chrome ou Firefox.');
+        localStorage.removeItem('grupoAtivo');
       }
-    }
+    });
 
-    function telaCheia() {
-      if (player.requestFullscreen) player.requestFullscreen();
-      else if (player.webkitRequestFullscreen) player.webkitRequestFullscreen();
-    }
+    container.appendChild(grupoDiv);
+    container.appendChild(canaisDiv);
+  });
 
-    function gravarCanal() {
-      alert('Função de gravação só pode ser feita via software externo no navegador (ex: OBS).');
-    }
+  // Restaurar grupo ativo
+  const salvo = localStorage.getItem('grupoAtivo');
+  if(salvo && grupos[salvo]) {
+    document.querySelectorAll('.grupo').forEach((g, i) => {
+      if(g.textContent === salvo) {
+        g.classList.add('active');
+        document.querySelectorAll('.canais')[i].style.display = 'block';
+      }
+    });
+  }
+}
 
-    carregarLista();
-  </script>
+// Toca o canal selecionado no player
+function tocarCanal(url, nome) {
+  const video = document.getElementById('video');
+  const title = document.getElementById('player-title');
+  title.textContent = "Assistindo: " + nome;
+
+  if(Hls.isSupported()) {
+    if(window.hls) window.hls.destroy();
+    window.hls = new Hls();
+    window.hls.loadSource(url);
+    window.hls.attachMedia(video);
+    window.hls.on(Hls.Events.MANIFEST_PARSED, () => video.play());
+  } else if(video.canPlayType('application/vnd.apple.mpegurl')) {
+    video.src = url;
+    video.addEventListener('loadedmetadata', () => video.play());
+  } else {
+    alert('Seu navegador não suporta reprodução HLS.');
+  }
+}
+
+// Filtra canais pelo nome
+document.getElementById('busca').addEventListener('input', function() {
+  const termo = this.value.toLowerCase();
+  document.querySelectorAll('.canais a').forEach(el => {
+    el.style.display = el.dataset.nome.includes(termo) ? 'flex' : 'none';
+  });
+});
+
+// Inicialização
+(async function(){
+  const urlLista = 'https://tinyurl.com/plamo999';
+  try {
+    const listaText = await carregarLista(urlLista);
+    const grupos = parseM3U(listaText);
+    montarMenu(grupos);
+  } catch(e) {
+    alert('Erro ao carregar a lista IPTV.');
+    console.error(e);
+  }
+})();
+</script>
+
 </body>
 </html>
