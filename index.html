@@ -1,266 +1,310 @@
 
+
 <!DOCTYPE html>
 <html lang="pt-BR">
+
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>IPTV por Grupos - DropDown com Logos</title>
-<style>
-  body {
-    font-family: Arial, sans-serif;
-    margin: 0; padding: 0;
-    background: #111;
-    color: #eee;
-    display: flex;
-    height: 100vh;
-  }
-  #menu {
-    width: 260px;
-    background: #222;
-    overflow-y: auto;
-    border-right: 2px solid #333;
-  }
-  #menu h2 {
-    margin: 15px;
-    font-size: 1.2em;
-    border-bottom: 1px solid #444;
-    padding-bottom: 8px;
-  }
-  #busca {
-    width: 100%;
-    padding: 10px;
-    border: none;
-    background: #111;
-    color: #eee;
-    font-size: 1em;
-    box-sizing: border-box;
-  }
-  .grupo {
-    cursor: pointer;
-    padding: 10px 15px;
-    border-bottom: 1px solid #333;
-    user-select: none;
-    position: relative;
-  }
-  .grupo::after {
-    content: "▸";
-    position: absolute;
-    right: 15px;
-    transition: transform 0.2s ease;
-  }
-  .grupo:hover {
-    background: #444;
-  }
-  .grupo.active {
-    background: #0055aa;
-  }
-  .grupo.active::after {
-    content: "▾";
-  }
-  .canais {
-    display: none;
-    background: #222;
-  }
-  .canais a {
-    display: flex;
-    align-items: center;
-    padding: 8px 15px;
-    color: #ccc;
-    text-decoration: none;
-    border-bottom: 1px solid #333;
-    font-size: 0.9em;
-  }
-  .canais a:hover {
-    background: #0055aa;
-    color: #fff;
-  }
-  .canais img {
-    width: 26px;
-    height: 16px;
-    object-fit: contain;
-    margin-right: 10px;
-    border: 1px solid #444;
-    background: #000;
-  }
-  #player-section {
-    flex: 1;
-    background: #000;
-    display: flex;
-    flex-direction: column;
-  }
-  #player-title {
-    padding: 12px;
-    background: #111;
-    font-size: 1.1em;
-    border-bottom: 1px solid #333;
-    text-align: center;
-  }
-  video {
-    flex: 1;
-    width: 100%;
-    background: black;
-  }
-</style>
-<script src="https://cdn.jsdelivr.net/npm/hls.js@1.4.0/dist/hls.min.js"></script>
-</head>
-<body>
+  <meta charset="UTF-8" />
+  <title>IPTV Player Responsivo</title>
+  <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <style>
+    * {
+      box-sizing: border-box;
+    }
 
-<div id="menu">
-  <h2>Grupos IPTV</h2>
-  <input type="text" id="busca" placeholder="Buscar canal..." />
-  <div id="grupos-container"></div>
-</div>
+    body {
+      margin: 0;
+      font-family: sans-serif;
+      background: #0e6c7e; 
+      color: white;
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+    }
 
-<div id="player-section">
-  <div id="player-title">Selecione um canal para assistir</div>
-  <video id="video" controls></video>
-</div>
+    header {
+      padding: 10px;
+      background: #1a4854;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      justify-content: center;
+      align-items: center;
+    }
 
-<script>
-// Função para buscar e processar a lista IPTV
-async function carregarLista(url) {
-  const res = await fetch(url);
-  const text = await res.text();
-  return text;
-}
+    input[type="text"] {
+      flex: 1;
+      min-width: 200px;
+      padding: 5px;
+      border-radius: 5px;
+      border: none;
+    }
 
-// Parse m3u para JSON por grupo
-function parseM3U(text) {
-  const lines = text.split('\n');
-  const grupos = {};
-  let currentGrupo = "Sem Grupo";
+    input[type="file"],
+    button {
+      padding: 6px 10px;
+      background: #000000;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+    }
 
-  for (let i = 0; i < lines.length; i++) {
-    const line = lines[i].trim();
-    if (line.startsWith('#EXTINF:')) {
-      const groupMatch = line.match(/group-title="([^"]+)"/i);
-      currentGrupo = groupMatch ? groupMatch[1] : "Sem Grupo";
+    .container {
+      display: flex;
+      flex: 1;
+      flex-direction: row;
+    }
 
-      const logoMatch = line.match(/tvg-logo="([^"]+)"/i);
-      const logo = logoMatch ? logoMatch[1] : null;
+    .sidebar {
+      width: 150px;
+      background: #408080;
+      display: flex;
+      flex-direction: column;
+      padding: 10px;
+    }
 
-      const nameMatch = line.match(/,(.*)$/);
-      const nomeCanal = nameMatch ? nameMatch[1] : "Sem Nome";
+    .sidebar button {
+      margin: 5px 0;
+      padding: 10px;
+      background: #000000;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+    }
 
-      const urlCanal = lines[i+1] ? lines[i+1].trim() : null;
+    .player-container {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      padding: 10px;
+      align-items: center;
+    }
 
-      if(urlCanal && !urlCanal.startsWith('#')) {
-        if(!grupos[currentGrupo]) grupos[currentGrupo] = [];
-        grupos[currentGrupo].push({nome: nomeCanal, url: urlCanal, logo: logo});
+    video {
+      width: 100%;
+      max-height: 60vh;
+      background: black;
+      border-radius: 8px;
+    }
+
+    .search-bar {
+      margin-top: 10px;
+      width: 100%;
+      max-width: 400px;
+    }
+
+    .search-bar input {
+      width: 100%;
+      padding: 8px;
+      border-radius: 5px;
+      border: none;
+    }
+
+    .channel-navigator {
+      display: flex;
+      gap: 10px;
+      margin-top: 10px;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+
+    .channel-navigator button {
+      background: #0a0a5c;
+      padding: 10px;
+      border-radius: 5px;
+      cursor: pointer;
+      border: none;
+      color: white;
+    }
+
+    .canal-ativo {
+      background: #ff0000 !important;
+      color: white !important;
+      font-weight: bold;
+    }
+
+    @media (max-width: 768px) {
+      .container {
+        flex-direction: column;
+      }
+
+      .sidebar {
+        flex-direction: row;
+        overflow-x: auto;
+        width: 100%;
+      }
+
+      .sidebar button {
+        flex: 1;
+        margin: 5px;
+        white-space: nowrap;
+      }
+
+      .channel-navigator {
+        justify-content: flex-start;
+        overflow-x: auto;
+      }
+
+      video {
+        max-height: 40vh;
       }
     }
-  }
-  return grupos;
-}
+  </style>
+</head>
 
-// Monta o menu com grupos e canais
-function montarMenu(grupos) {
-  const container = document.getElementById('grupos-container');
-  container.innerHTML = '';
+<body>
+  <header>
+    <input type="text" id="urlInput" placeholder="Cole a URL da sua lista .m3u">
+    <button onclick="loadFromURL()">Carregar</button>
+    <input type="file" id="fileInput" accept=".m3u">
+  </header>
 
-  Object.entries(grupos).forEach(([grupoNome, canais]) => {
-    const grupoDiv = document.createElement('div');
-    grupoDiv.classList.add('grupo');
-    grupoDiv.textContent = grupoNome;
+  <div class="container">
+    <div class="sidebar" id="groupList"></div>
 
-    const canaisDiv = document.createElement('div');
-    canaisDiv.classList.add('canais');
+    <div class="player-container">
+      <video id="player" controls></video>
 
-    canais.forEach(canal => {
-      const a = document.createElement('a');
-      a.href = "#";
-      a.title = canal.nome;
-      a.dataset.nome = canal.nome.toLowerCase();
-      a.addEventListener('click', (e) => {
-        e.preventDefault();
-        tocarCanal(canal.url, canal.nome);
+      <div class="search-bar">
+        <input type="text" id="searchInput" placeholder="Buscar canal..." oninput="filterChannels()">
+      </div>
+
+      <div class="channel-navigator" id="channelList"></div>
+    </div>
+  </div>
+
+  <script>
+    let channels = [];
+    let currentGroup = '';
+    let groupChannels = [];
+    let canalAtual = '';
+
+    document.getElementById('fileInput').addEventListener('change', function (e) {
+      const file = e.target.files[0];
+      const reader = new FileReader();
+      reader.onload = function () {
+        parseM3U(reader.result);
+      };
+      reader.readAsText(file);
+    });
+
+    async function loadFromURL() {
+      const url = document.getElementById('urlInput').value;
+      if (!url) return alert("Informe uma URL!");
+      try {
+        const res = await fetch(url);
+        const text = await res.text();
+        parseM3U(text);
+      } catch (err) {
+        alert("Erro ao carregar a lista: " + err);
+      }
+    }
+
+    function parseM3U(content) {
+      const lines = content.split('\n');
+      let current = {};
+      channels = [];
+
+      for (let i = 0; i < lines.length; i++) {
+        const line = lines[i].trim();
+        if (line.startsWith('#EXTINF')) {
+          const groupMatch = line.match(/group-title="(.*?)"/);
+          const nameMatch = line.match(/,(.*)$/);
+          current = {
+            name: nameMatch ? nameMatch[1] : 'Sem nome',
+            group: groupMatch ? groupMatch[1] : 'Sem grupo'
+          };
+        } else if (line.startsWith('http')) {
+          current.url = line;
+          channels.push({ ...current });
+        }
+      }
+
+      renderGroups();
+    }
+
+    function renderGroups() {
+      const groupList = document.getElementById('groupList');
+      const uniqueGroups = [...new Set(channels.map(c => c.group))];
+      groupList.innerHTML = '';
+      uniqueGroups.forEach(group => {
+        const btn = document.createElement('button');
+        btn.textContent = group;
+        btn.onclick = () => {
+          currentGroup = group;
+          renderChannels(group);
+        };
+        groupList.appendChild(btn);
       });
 
-      if(canal.logo){
-        const img = document.createElement('img');
-        img.src = canal.logo;
-        img.alt = canal.nome + ' logo';
-        a.appendChild(img);
+      if (uniqueGroups.length > 0) {
+        currentGroup = uniqueGroups[0];
+        renderChannels(currentGroup);
+      }
+    }
+
+    function renderChannels(group) {
+      groupChannels = channels.filter(c => c.group === group);
+      document.getElementById('searchInput').value = "";
+      displayChannels(groupChannels);
+    }
+
+    function displayChannels(list) {
+      const channelList = document.getElementById('channelList');
+      channelList.innerHTML = '';
+      list.forEach(channel => {
+        const btn = document.createElement('button');
+        btn.textContent = channel.name;
+        btn.dataset.url = channel.url;
+        btn.onclick = () => playChannel(channel.url);
+        if (channel.url === canalAtual) {
+          btn.classList.add('canal-ativo');
+        }
+        channelList.appendChild(btn);
+      });
+    }
+
+    function filterChannels() {
+      const input = document.getElementById('searchInput').value.toLowerCase();
+      const filtered = groupChannels.filter(c => c.name.toLowerCase().includes(input));
+      displayChannels(filtered);
+    }
+
+    function playChannel(url) {
+      const video = document.getElementById('player');
+      canalAtual = url;
+
+      if (!url.endsWith('.m3u8')) {
+        alert('Este canal não é compatível (formato não suportado). Use .m3u8');
+        return;
       }
 
-      const spanNome = document.createElement('span');
-      spanNome.textContent = canal.nome;
-      a.appendChild(spanNome);
-
-      canaisDiv.appendChild(a);
-    });
-
-    grupoDiv.addEventListener('click', () => {
-      const isActive = grupoDiv.classList.contains('active');
-      document.querySelectorAll('.grupo').forEach(g => g.classList.remove('active'));
-      document.querySelectorAll('.canais').forEach(c => c.style.display = 'none');
-
-      if(!isActive) {
-        grupoDiv.classList.add('active');
-        canaisDiv.style.display = 'block';
-        localStorage.setItem('grupoAtivo', grupoNome);
+      if (Hls.isSupported()) {
+        const hls = new Hls();
+        hls.loadSource(url);
+        hls.attachMedia(video);
+      } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
+        video.src = url;
       } else {
-        localStorage.removeItem('grupoAtivo');
+        alert('Este navegador não suporta HLS.');
       }
-    });
 
-    container.appendChild(grupoDiv);
-    container.appendChild(canaisDiv);
-  });
+      destacarBotaoCanalAtivo();
+    }
 
-  // Restaurar grupo ativo
-  const salvo = localStorage.getItem('grupoAtivo');
-  if(salvo && grupos[salvo]) {
-    document.querySelectorAll('.grupo').forEach((g, i) => {
-      if(g.textContent === salvo) {
-        g.classList.add('active');
-        document.querySelectorAll('.canais')[i].style.display = 'block';
-      }
-    });
-  }
-}
-
-// Toca o canal selecionado no player
-function tocarCanal(url, nome) {
-  const video = document.getElementById('video');
-  const title = document.getElementById('player-title');
-  title.textContent = "Assistindo: " + nome;
-
-  if(Hls.isSupported()) {
-    if(window.hls) window.hls.destroy();
-    window.hls = new Hls();
-    window.hls.loadSource(url);
-    window.hls.attachMedia(video);
-    window.hls.on(Hls.Events.MANIFEST_PARSED, () => video.play());
-  } else if(video.canPlayType('application/vnd.apple.mpegurl')) {
-    video.src = url;
-    video.addEventListener('loadedmetadata', () => video.play());
-  } else {
-    alert('Seu navegador não suporta reprodução HLS.');
-  }
-}
-
-// Filtra canais pelo nome
-document.getElementById('busca').addEventListener('input', function() {
-  const termo = this.value.toLowerCase();
-  document.querySelectorAll('.canais a').forEach(el => {
-    el.style.display = el.dataset.nome.includes(termo) ? 'flex' : 'none';
-  });
-});
-
-// Inicialização
-(async function(){
-  const urlLista = 'https://tinyurl.com/plamo999';
-  try {
-    const listaText = await carregarLista(urlLista);
-    const grupos = parseM3U(listaText);
-    montarMenu(grupos);
-  } catch(e) {
-    alert('Erro ao carregar a lista IPTV.');
-    console.error(e);
-  }
-})();
-</script>
-
+    function destacarBotaoCanalAtivo() {
+      const botoes = document.querySelectorAll('#channelList button');
+      botoes.forEach(botao => {
+        if (botao.dataset.url === canalAtual) {
+          botao.classList.add('canal-ativo');
+        } else {
+          botao.classList.remove('canal-ativo');
+        }
+      });
+    }
+  </script>
 </body>
 </html>
