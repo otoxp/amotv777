@@ -1,310 +1,146 @@
 
 
+
 <!DOCTYPE html>
 <html lang="pt-BR">
-
 <head>
-  <meta charset="UTF-8" />
-  <title>IPTV Player Responsivo</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>IPTV Web</title>
   <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <style>
-    * {
-      box-sizing: border-box;
-    }
-
     body {
       margin: 0;
-      font-family: sans-serif;
-      background: #0e6c7e; 
-      color: white;
-      display: flex;
-      flex-direction: column;
-      height: 100vh;
+      font-family: Arial, sans-serif;
+      background-color: #000;
+      color: #fff;
     }
-
     header {
+      background-color: #111;
       padding: 10px;
-      background: #1a4854;
-      display: flex;
-      flex-wrap: wrap;
-      gap: 10px;
-      justify-content: center;
-      align-items: center;
+      text-align: center;
+      font-size: 1.5em;
     }
-
-    input[type="text"] {
-      flex: 1;
-      min-width: 200px;
-      padding: 5px;
-      border-radius: 5px;
-      border: none;
-    }
-
-    input[type="file"],
-    button {
-      padding: 6px 10px;
-      background: #000000;
-      color: white;
-      border: none;
-      border-radius: 5px;
-      cursor: pointer;
-    }
-
-    .container {
-      display: flex;
-      flex: 1;
-      flex-direction: row;
-    }
-
-    .sidebar {
-      width: 150px;
-      background: #408080;
+    main {
       display: flex;
       flex-direction: column;
-      padding: 10px;
-    }
-
-    .sidebar button {
-      margin: 5px 0;
-      padding: 10px;
-      background: #000000;
-      color: white;
-      border: none;
-      border-radius: 5px;
-      cursor: pointer;
-    }
-
-    .player-container {
-      flex: 1;
-      display: flex;
-      flex-direction: column;
-      padding: 10px;
       align-items: center;
+      padding: 10px;
     }
-
     video {
-      width: 100%;
-      max-height: 60vh;
-      background: black;
-      border-radius: 8px;
+      width: 90%;
+      max-width: 800px;
+      background: #000;
     }
-
-    .search-bar {
-      margin-top: 10px;
-      width: 100%;
-      max-width: 400px;
-    }
-
-    .search-bar input {
-      width: 100%;
-      padding: 8px;
-      border-radius: 5px;
-      border: none;
-    }
-
-    .channel-navigator {
+    #controles {
+      margin: 10px 0;
       display: flex;
       gap: 10px;
-      margin-top: 10px;
       flex-wrap: wrap;
       justify-content: center;
     }
-
-    .channel-navigator button {
-      background: #0a0a5c;
-      padding: 10px;
-      border-radius: 5px;
-      cursor: pointer;
-      border: none;
-      color: white;
+    select, input[type="text"], button {
+      padding: 5px;
+      font-size: 1em;
     }
-
-    .canal-ativo {
-      background: #ff0000 !important;
-      color: white !important;
-      font-weight: bold;
-    }
-
-    @media (max-width: 768px) {
-      .container {
-        flex-direction: column;
-      }
-
-      .sidebar {
-        flex-direction: row;
-        overflow-x: auto;
-        width: 100%;
-      }
-
-      .sidebar button {
-        flex: 1;
-        margin: 5px;
-        white-space: nowrap;
-      }
-
-      .channel-navigator {
-        justify-content: flex-start;
-        overflow-x: auto;
-      }
-
-      video {
-        max-height: 40vh;
-      }
+    #canal-info {
+      margin-top: 10px;
+      font-size: 1em;
+      color: #0f0;
     }
   </style>
 </head>
-
 <body>
-  <header>
-    <input type="text" id="urlInput" placeholder="Cole a URL da sua lista .m3u">
-    <button onclick="loadFromURL()">Carregar</button>
-    <input type="file" id="fileInput" accept=".m3u">
-  </header>
+  <header>📺 IPTV Web Player</header>
+  <main>
+    <video id="player" controls></video>
 
-  <div class="container">
-    <div class="sidebar" id="groupList"></div>
-
-    <div class="player-container">
-      <video id="player" controls></video>
-
-      <div class="search-bar">
-        <input type="text" id="searchInput" placeholder="Buscar canal..." oninput="filterChannels()">
-      </div>
-
-      <div class="channel-navigator" id="channelList"></div>
+    <div id="controles">
+      <select id="grupoSelect"></select>
+      <select id="canalSelect"></select>
+      <input type="text" id="busca" placeholder="🔍 Buscar canal...">
+      <button onclick="tocarCanal()">▶️ Assistir</button>
+      <button onclick="gravarCanal()">⏺ Gravar</button>
+      <button onclick="telaCheia()">🖥️ Tela cheia</button>
     </div>
-  </div>
+
+    <div id="canal-info"></div>
+  </main>
 
   <script>
-    let channels = [];
-    let currentGroup = '';
-    let groupChannels = [];
-    let canalAtual = '';
+    const listaURL = 'https://tinyurl.com/plamo999';
+    const player = document.getElementById('player');
+    const grupoSelect = document.getElementById('grupoSelect');
+    const canalSelect = document.getElementById('canalSelect');
+    const buscaInput = document.getElementById('busca');
+    const canalInfo = document.getElementById('canal-info');
 
-    document.getElementById('fileInput').addEventListener('change', function (e) {
-      const file = e.target.files[0];
-      const reader = new FileReader();
-      reader.onload = function () {
-        parseM3U(reader.result);
-      };
-      reader.readAsText(file);
-    });
+    let canaisPorGrupo = {};
 
-    async function loadFromURL() {
-      const url = document.getElementById('urlInput').value;
-      if (!url) return alert("Informe uma URL!");
-      try {
-        const res = await fetch(url);
-        const text = await res.text();
-        parseM3U(text);
-      } catch (err) {
-        alert("Erro ao carregar a lista: " + err);
-      }
-    }
+    async function carregarLista() {
+      const resposta = await fetch(listaURL);
+      const texto = await resposta.text();
+      const linhas = texto.split('\n');
+      let grupoAtual = '';
 
-    function parseM3U(content) {
-      const lines = content.split('\n');
-      let current = {};
-      channels = [];
+      for (let i = 0; i < linhas.length; i++) {
+        if (linhas[i].startsWith('#EXTINF')) {
+          const grupo = linhas[i].match(/group-title="([^"]+)"/);
+          const nome = linhas[i].split(',').pop();
+          const url = linhas[i + 1];
 
-      for (let i = 0; i < lines.length; i++) {
-        const line = lines[i].trim();
-        if (line.startsWith('#EXTINF')) {
-          const groupMatch = line.match(/group-title="(.*?)"/);
-          const nameMatch = line.match(/,(.*)$/);
-          current = {
-            name: nameMatch ? nameMatch[1] : 'Sem nome',
-            group: groupMatch ? groupMatch[1] : 'Sem grupo'
-          };
-        } else if (line.startsWith('http')) {
-          current.url = line;
-          channels.push({ ...current });
+          if (grupo && nome && url) {
+            grupoAtual = grupo[1];
+            if (!canaisPorGrupo[grupoAtual]) canaisPorGrupo[grupoAtual] = [];
+            canaisPorGrupo[grupoAtual].push({ nome, url });
+          }
         }
       }
 
-      renderGroups();
+      grupoSelect.innerHTML = Object.keys(canaisPorGrupo).map(g => `<option>${g}</option>`).join('');
+      grupoSelect.onchange = atualizarCanais;
+      buscaInput.oninput = atualizarCanais;
+      atualizarCanais();
     }
 
-    function renderGroups() {
-      const groupList = document.getElementById('groupList');
-      const uniqueGroups = [...new Set(channels.map(c => c.group))];
-      groupList.innerHTML = '';
-      uniqueGroups.forEach(group => {
-        const btn = document.createElement('button');
-        btn.textContent = group;
-        btn.onclick = () => {
-          currentGroup = group;
-          renderChannels(group);
-        };
-        groupList.appendChild(btn);
-      });
+    function atualizarCanais() {
+      const grupo = grupoSelect.value;
+      const busca = buscaInput.value.toLowerCase();
+      const canais = canaisPorGrupo[grupo] || [];
 
-      if (uniqueGroups.length > 0) {
-        currentGroup = uniqueGroups[0];
-        renderChannels(currentGroup);
-      }
+      canalSelect.innerHTML = canais
+        .filter(c => c.nome.toLowerCase().includes(busca))
+        .map(c => `<option value="${c.url}">${c.nome}</option>`) 
+        .join('');
     }
 
-    function renderChannels(group) {
-      groupChannels = channels.filter(c => c.group === group);
-      document.getElementById('searchInput').value = "";
-      displayChannels(groupChannels);
-    }
-
-    function displayChannels(list) {
-      const channelList = document.getElementById('channelList');
-      channelList.innerHTML = '';
-      list.forEach(channel => {
-        const btn = document.createElement('button');
-        btn.textContent = channel.name;
-        btn.dataset.url = channel.url;
-        btn.onclick = () => playChannel(channel.url);
-        if (channel.url === canalAtual) {
-          btn.classList.add('canal-ativo');
-        }
-        channelList.appendChild(btn);
-      });
-    }
-
-    function filterChannels() {
-      const input = document.getElementById('searchInput').value.toLowerCase();
-      const filtered = groupChannels.filter(c => c.name.toLowerCase().includes(input));
-      displayChannels(filtered);
-    }
-
-    function playChannel(url) {
-      const video = document.getElementById('player');
-      canalAtual = url;
-
-      if (!url.endsWith('.m3u8')) {
-        alert('Este canal não é compatível (formato não suportado). Use .m3u8');
-        return;
-      }
+    function tocarCanal() {
+      const url = canalSelect.value;
+      canalInfo.textContent = 'Reproduzindo: ' + canalSelect.options[canalSelect.selectedIndex].text;
 
       if (Hls.isSupported()) {
         const hls = new Hls();
         hls.loadSource(url);
-        hls.attachMedia(video);
-      } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
-        video.src = url;
+        hls.attachMedia(player);
+        hls.on(Hls.Events.MANIFEST_PARSED, () => player.play());
+      } else if (player.canPlayType('application/vnd.apple.mpegurl')) {
+        player.src = url;
+        player.play();
       } else {
-        alert('Este navegador não suporta HLS.');
+        alert('Este navegador não suporta HLS. Use Chrome ou Firefox.');
       }
-
-      destacarBotaoCanalAtivo();
     }
 
-    function destacarBotaoCanalAtivo() {
-      const botoes = document.querySelectorAll('#channelList button');
-      botoes.forEach(botao => {
-        if (botao.dataset.url === canalAtual) {
-          botao.classList.add('canal-ativo');
-        } else {
-          botao.classList.remove('canal-ativo');
-        }
-      });
+    function telaCheia() {
+      if (player.requestFullscreen) player.requestFullscreen();
+      else if (player.webkitRequestFullscreen) player.webkitRequestFullscreen();
     }
+
+    function gravarCanal() {
+      alert('Função de gravação só pode ser feita via software externo no navegador (ex: OBS).');
+    }
+
+    carregarLista();
   </script>
 </body>
 </html>
