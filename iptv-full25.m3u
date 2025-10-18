@@ -1,4 +1,5 @@
 #EXTM3U
+#EXTM3U url-tvg="http://tinyurl.com/4uxff8vd"
 #EXTINF:-1 tvg-id=" TNT [4K]" tvg-name="TNT [4K]" tvg-logo="https://i.imgur.com/s99Fd0l.png" group-title="Canais | TNT",TNT [4K]
 http://play.biturl.vip/live/ramagi777/e4ifqhgjpqf/215404.m3u8
 #EXTINF:-1 tvg-id="+SBT Novelas" tvg-name="+SBT Novelas" tvg-logo="https://i.imgur.com/As98iql.png" group-title="Canais | SBT",+SBT Novelas
@@ -5469,4 +5470,5 @@ http://play.biturl.vip/live/ramagi777/e4ifqhgjpqf/70116.m3u8
 http://play.biturl.vip/live/ramagi777/e4ifqhgjpqf/81838.m3u8
 #EXTINF:-1 tvg-id="a.e.br" tvg-name="[DOC]Discovery 24H" tvg-logo="https://i.imgur.com/K4qvjd1.png" group-title="Canais | 24 Horas Variados",[DOC]Discovery 24H
 http://play.biturl.vip/live/ramagi777/e4ifqhgjpqf/69689.m3u8
+
 
