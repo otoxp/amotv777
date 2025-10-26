@@ -1,0 +1,475 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>IPTV Player - Estilo TiviMate</title>
+    <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
+    <style>
+        /* ------------------------- ESTILO BASE (TiviMate / Smart TV) ------------------------- */
+        body {
+            font-family: 'Roboto', Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #121212; /* Fundo muito escuro */
+            color: #e0e0e0;
+            display: flex;
+            height: 100vh;
+            overflow: hidden;
+        }
+        
+        /* ------------------------- BARRA LATERAL (SIDEBAR) ------------------------- */
+        #sidebar {
+            width: 300px;
+            background-color: #1f1f1f; /* Fundo da barra lateral */
+            padding: 0;
+            flex-shrink: 0;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 2px 0 5px rgba(0, 0, 0, 0.5);
+            transition: width 0.3s ease-out;
+        }
+
+        #navigation-header {
+            padding: 15px 20px;
+            font-size: 1.2em;
+            font-weight: 500;
+            background-color: #2b2b2b;
+            border-bottom: 1px solid #333;
+            cursor: pointer;
+        }
+
+        #navigation-header:hover {
+            color: #00bcd4; /* Azul ciano de foco */
+        }
+
+        #content-area {
+            flex-grow: 1;
+            overflow-y: scroll;
+            padding: 0 20px;
+        }
+        
+        /* Estilo dos Itens (Grupos e Canais) */
+        .nav-item {
+            padding: 12px 10px;
+            margin: 5px 0;
+            cursor: pointer;
+            font-size: 1.05em;
+            border-radius: 6px;
+            transition: background-color 0.2s, box-shadow 0.2s, transform 0.2s;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            border: 1px solid transparent;
+        }
+
+        /* Efeito de Foco TiviMate (Aumento e Sombra Ciano) */
+        .nav-item.focused {
+            background-color: #00bcd4; /* Ciano TiviMate */
+            color: #1f1f1f; /* Texto escuro no fundo ciano */
+            transform: scale(1.05);
+            box-shadow: 0 0 10px rgba(0, 188, 212, 0.7);
+            border-color: #ffffff;
+            z-index: 10;
+        }
+
+        .nav-item.active {
+            background-color: #4caf50; /* Verde para o canal atual */
+            color: white;
+        }
+        
+        /* ------------------------- ÁREA DO PLAYER ------------------------- */
+        #main-content {
+            flex-grow: 1;
+            display: flex;
+            flex-direction: column;
+            position: relative;
+        }
+
+        #video-container {
+            width: 100%;
+            flex-grow: 1;
+            background: black;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        
+        #video-player {
+            width: 100%;
+            height: 100%;
+            background: black;
+        }
+
+        /* Sobreposição de Status e Título (OSD) */
+        #video-info {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            padding: 20px;
+            background: linear-gradient(to bottom, rgba(0, 0, 0, 0.7), transparent);
+            box-sizing: border-box;
+            opacity: 1;
+            transition: opacity 0.5s;
+            pointer-events: none;
+        }
+        #current-channel-name {
+            font-size: 2.5em;
+            margin: 0;
+            font-weight: bold;
+            text-shadow: 2px 2px 4px #000000;
+        }
+        #status-message {
+            font-size: 0.9em;
+            color: #aaa;
+        }
+
+        /* ------------------------- ÁREA DE CARREGAMENTO ------------------------- */
+        #upload-area {
+            padding: 20px;
+            background-color: #2b2b2b;
+            border-bottom: 1px solid #333;
+        }
+
+        #urlInput, #loadUrlButton {
+            padding: 10px;
+            border-radius: 4px;
+            border: 1px solid #555;
+            font-size: 1em;
+            width: 100%;
+            box-sizing: border-box;
+            margin-top: 5px;
+        }
+        
+        #urlInput {
+            background-color: #333;
+            color: white;
+            margin-bottom: 10px;
+        }
+
+        #loadUrlButton {
+            background-color: #00bcd4;
+            color: #1f1f1f;
+            font-weight: bold;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+
+        #loadUrlButton:hover {
+            background-color: #008ba3;
+        }
+
+    </style>
+</head>
+<body>
+
+    <div id="sidebar">
+        <div id="upload-area">
+            <h3>CARREGAR LISTA M3U</h3>
+            
+            <label for="urlInput" style="display: block; font-size: 0.9em; color: #aaa;">Link da Lista (Ex: tinyurl.com)</label>
+            <input type="text" id="urlInput" placeholder="Cole o link da lista M3U aqui..." value="https://tinyurl.com/plamo999">
+            <button id="loadUrlButton">CARREGAR LISTA</button>
+
+            <div id="status-message" style="margin-top: 10px;"></div>
+        </div>
+
+        <div id="navigation-header" onclick="showGroups()">GRUPOS</div>
+        
+        <div id="content-area">
+            <p id="initial-message" style="text-align: center; color: #aaa; padding-top: 20px;">
+                Carregue sua lista acima para começar.
+            </p>
+        </div>
+    </div>
+
+    <div id="main-content">
+        <div id="video-info">
+            <p id="current-channel-name">IPTV TiviMate Style</p>
+        </div>
+        <div id="video-container">
+            <video id="video-player" controls autoplay tabindex="0"></video>
+        </div>
+    </div>
+
+    <script>
+        const urlInput = document.getElementById('urlInput');
+        const loadUrlButton = document.getElementById('loadUrlButton');
+        const contentArea = document.getElementById('content-area');
+        const navigationHeader = document.getElementById('navigation-header');
+        const video = document.getElementById('video-player');
+        const statusDiv = document.getElementById('status-message');
+        const currentChannelName = document.getElementById('current-channel-name');
+        
+        let groupedChannels = {};
+        let currentGroupName = null;
+        let hls = null;
+        let focusedIndex = -1;
+        let navigationMode = 'GROUPS'; // 'GROUPS' ou 'CHANNELS'
+
+        // --------------------------------- FUNÇÕES DE CARREGAMENTO E PARSING ---------------------------------
+        
+        loadUrlButton.addEventListener('click', loadListFromUrl);
+
+        function loadListFromUrl() {
+            const url = urlInput.value.trim();
+            if (!url) {
+                statusDiv.textContent = 'Por favor, insira uma URL válida.';
+                return;
+            }
+
+            statusDiv.textContent = 'Baixando lista da internet...';
+            currentChannelName.textContent = 'Carregando lista...';
+
+            fetch(url)
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error(`Erro HTTP! Status: ${response.status}.`);
+                    }
+                    return response.text();
+                })
+                .then(content => {
+                    if (!content.startsWith('#EXTM3U')) {
+                        throw new Error('O link não parece ser um arquivo M3U/M3U8 válido.');
+                    }
+                    groupedChannels = parseM3U(content);
+                    statusDiv.textContent = `Lista carregada. Total de ${Object.keys(groupedChannels).length} grupos.`;
+                    showGroups();
+                })
+                .catch(error => {
+                    console.error('Erro ao carregar lista da URL:', error);
+                    statusDiv.innerHTML = `Falha: ${error.message}. <br> **DICA:** Erros de link na web são comuns (CORS). Tente abrir em um servidor web.`;
+                    contentArea.innerHTML = '<p style="text-align: center; color: #f00; padding-top: 20px;">Falha ao carregar lista.</p>';
+                });
+        }
+
+        // Função para analisar e agrupar o M3U
+        function parseM3U(content) {
+            const lines = content.split('\n');
+            const groups = {};
+            let currentChannel = {};
+
+            for (const line of lines) {
+                if (line.startsWith('#EXTINF:')) {
+                    const groupMatch = line.match(/group-title="([^"]*)"/);
+                    const nameMatch = line.match(/tvg-name="([^"]*)"|,(.*)/);
+
+                    let groupName = (groupMatch && groupMatch[1]) ? groupMatch[1].trim() : 'Sem Grupo';
+                    let channelName = 'Canal Desconhecido';
+
+                    if (nameMatch && nameMatch[1]) {
+                        channelName = nameMatch[1];
+                    } else if (nameMatch && nameMatch[2]) {
+                        // Última parte da linha após a vírgula
+                        channelName = nameMatch[2].trim();
+                    }
+
+                    // Se a última parte for vazia ou for a URL, tentar extrair melhor
+                    if (channelName.includes(',')) {
+                        channelName = channelName.substring(channelName.lastIndexOf(',') + 1).trim();
+                    }
+                    
+                    currentChannel = { name: channelName, group: groupName, url: '' };
+
+                } else if (line.startsWith('http')) {
+                    currentChannel.url = line.trim();
+                    if (currentChannel.name && currentChannel.url) {
+                        const groupKey = currentChannel.group;
+                        if (!groups[groupKey]) {
+                            groups[groupKey] = [];
+                        }
+                        groups[groupKey].push(currentChannel);
+                        currentChannel = {};
+                    }
+                }
+            }
+            return groups;
+        }
+
+        // --------------------------------- FUNÇÕES DE NAVEGAÇÃO ---------------------------------
+
+        // Exibe a lista de Grupos
+        function showGroups() {
+            contentArea.innerHTML = '';
+            navigationHeader.textContent = 'GRUPOS';
+            navigationMode = 'GROUPS';
+            focusedIndex = 0; // Foca no primeiro item
+
+            const groupNames = Object.keys(groupedChannels);
+            groupNames.forEach((groupName, index) => {
+                const item = document.createElement('div');
+                item.classList.add('nav-item');
+                item.textContent = `${groupName} (${groupedChannels[groupName].length})`;
+                item.setAttribute('data-group', groupName);
+                item.setAttribute('data-index', index);
+                
+                item.addEventListener('click', () => {
+                    currentGroupName = groupName;
+                    showChannels(groupName);
+                });
+
+                // Adiciona o foco inicial no primeiro item
+                if (index === 0) {
+                    item.classList.add('focused');
+                }
+
+                contentArea.appendChild(item);
+            });
+            contentArea.scrollTop = 0;
+        }
+
+        // Exibe a lista de Canais de um Grupo
+        function showChannels(groupName) {
+            contentArea.innerHTML = '';
+            navigationHeader.textContent = `← ${groupName}`;
+            navigationMode = 'CHANNELS';
+            focusedIndex = 0;
+
+            const channels = groupedChannels[groupName] || [];
+            if (channels.length === 0) {
+                contentArea.innerHTML = '<p style="text-align: center; color: #aaa; padding-top: 20px;">Nenhum canal neste grupo.</p>';
+                return;
+            }
+
+            channels.forEach((channel, index) => {
+                const item = document.createElement('div');
+                item.classList.add('nav-item');
+                item.textContent = channel.name;
+                item.setAttribute('data-url', channel.url);
+                item.setAttribute('data-index', index);
+                
+                item.addEventListener('click', () => {
+                    playStream(channel.url, channel.name);
+                    // Adiciona a classe 'active' ao canal em reprodução
+                    document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
+                    item.classList.add('active');
+                });
+                
+                // Adiciona o foco inicial no primeiro item
+                if (index === 0) {
+                    item.classList.add('focused');
+                }
+
+                contentArea.appendChild(item);
+            });
+            contentArea.scrollTop = 0;
+        }
+
+        // --------------------------------- FUNÇÕES DE PLAYER ---------------------------------
+        
+        function playStream(url, name) {
+            if (!url) return;
+
+            currentChannelName.textContent = name || 'Carregando Stream...';
+            statusDiv.textContent = 'Reproduzindo...';
+            
+            // Destrói e configura o HLS.js
+            if (hls) {
+                hls.destroy();
+            }
+
+            if (Hls.isSupported()) {
+                hls = new Hls();
+                hls.loadSource(url);
+                hls.attachMedia(video);
+                hls.on(Hls.Events.MANIFEST_PARSED, function() {
+                    video.play().catch(e => console.log('Autoplay blocked:', e));
+                });
+                hls.on(Hls.Events.ERROR, function (event, data) {
+                    if (data.fatal) {
+                         statusDiv.textContent = `Erro Fatal no Stream: ${data.details}. Verifique o link.`;
+                         console.error('HLS.js fatal error:', data);
+                    }
+                });
+
+            } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
+                // Fallback para Safari/iOS
+                video.src = url;
+                video.addEventListener('loadedmetadata', function() {
+                    video.play().catch(e => console.log('Autoplay blocked:', e));
+                });
+            } else {
+                statusDiv.textContent = 'Seu navegador não suporta a tecnologia de streaming (HLS).';
+            }
+        }
+
+        // --------------------------------- NAVEGAÇÃO POR TECLADO (CONTROLE REMOTO) ---------------------------------
+        
+        document.addEventListener('keydown', (e) => {
+            // Se o input de URL estiver focado, prioriza o teclado para digitação
+            if (document.activeElement === urlInput) {
+                if (e.key === 'Enter') {
+                    loadUrlButton.click();
+                }
+                return; 
+            }
+
+            const items = document.querySelectorAll('.nav-item');
+            if (items.length === 0) return;
+
+            // Remove o foco do item anterior
+            if (focusedIndex >= 0 && items[focusedIndex]) {
+                items[focusedIndex].classList.remove('focused');
+            }
+
+            let newIndex = focusedIndex;
+            
+            // Ação: Selecionar/Entrar
+            if (e.key === 'Enter') {
+                if (focusedIndex >= 0) {
+                    items[focusedIndex].click();
+                }
+                e.preventDefault();
+                return;
+            }
+            
+            // Ação: Voltar
+            if (e.key === 'Backspace' || e.key === 'ArrowLeft' || e.key === 'Left') {
+                if (navigationMode === 'CHANNELS') {
+                    showGroups(); // Volta para a lista de Grupos
+                } else if (navigationMode === 'GROUPS') {
+                    // Mover foco para o botão de Carregar Lista ou similar
+                    urlInput.focus(); 
+                }
+                e.preventDefault();
+                return;
+            }
+
+            // Ação: Navegar para Baixo
+            if (e.key === 'ArrowDown' || e.key === 'Down') {
+                newIndex = (focusedIndex + 1) % items.length;
+                e.preventDefault();
+            } 
+            // Ação: Navegar para Cima
+            else if (e.key === 'ArrowUp' || e.key === 'Up') {
+                newIndex = (focusedIndex - 1 + items.length) % items.length;
+                e.preventDefault();
+            }
+
+            // Ação: Navegar para a Direita (Entrar no Grupo/Próximo Elemento)
+            else if (e.key === 'ArrowRight' || e.key === 'Right') {
+                if (navigationMode === 'GROUPS' && focusedIndex >= 0) {
+                    // Clica no grupo focado para abrir os canais
+                    items[focusedIndex].click();
+                }
+                e.preventDefault();
+                return;
+            }
+
+            // Atualiza o foco visual
+            focusedIndex = newIndex;
+            if (focusedIndex >= 0 && items[focusedIndex]) {
+                items[focusedIndex].classList.add('focused');
+                // Rola a lista para garantir que o item focado esteja visível
+                items[focusedIndex].scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+            }
+        });
+        
+        document.addEventListener('DOMContentLoaded', () => {
+            // Foca o input da URL ao carregar para o usuário clicar em "Carregar"
+            urlInput.focus();
+        });
+    </script>
+</body>
+</html>
