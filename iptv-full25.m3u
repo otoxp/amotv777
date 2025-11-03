@@ -1,5 +1,5 @@
-#EXTM3U url-tvg="http://tinyurl.com/4uxff8vd"
 #EXTM3U
+#EXTM3U url-tvg="http://tinyurl.com/4uxff8vd"
 #EXTINF:-1 tvg-id="AELatinAmerica.us@Brazil" tvg-name="A&E",A&E
 http://play.dnsrot.vip/live/ramagi777/e4ifqhgjpqf/40263.m3u8
 #EXTINF:-1 tvg-id="AMCLatinAmerica.us@Brazil" tvg-name="AMC Brasil",AMC Brasil
@@ -624,3 +624,4 @@ http://play.dnsrot.vip/live/ramagi777/e4ifqhgjpqf/953318.m3u8
 http://play.dnsrot.vip/live/ramagi777/e4ifqhgjpqf/215343.m3u8
 #EXTINF:-1 tvg-id="[US] Golf Channel " tvg-name="[US] Golf Channel " tvg-logo="https://i.imgur.com/U2HnYKd.png" group-title="Canais | Internacionais",[US] Golf Channel 
 http://play.dnsrot.vip/live/ramagi777/e4ifqhgjpqf/225832.m3u8
+
