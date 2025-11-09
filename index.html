@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>IPTV Copilot</title>
+  <meta name="description" content="Painel IPTV moderno e seguro — IPTV Copilot" />
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#2143a8">
+  <link rel="icon" href="assets/icon-192.png" />
+  <link rel="stylesheet" href="styles/main.css" />
+  <script src="https://cdn.jsdelivr.net/npm/hls.js@1.5.0/dist/hls.min.js"></script>
+</head>
+<body>
+  <div class="topbar">
+    <div class="logo">
+      <img src="assets/logo.png" alt="IPTV Copilot logo">
+      <div>
+        <div class="brand">IPTV Copilot</div>
+        <div class="subtitle">Seu painel pessoal de IPTV — seguro e moderno</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="app">
+    <aside class="sidebar">
+      <div class="muted">Cole sua URL M3U ou envie um arquivo local.</div>
+      <input id="m3uUrl" placeholder="Colar URL M3U (opcional)" aria-label="URL M3U" />
+      <input id="fileInput" type="file" accept=".m3u,.txt" aria-label="Arquivo M3U" />
+      <input id="search" placeholder="Buscar canal..." aria-label="Buscar canal" />
+      <select id="groupSelect" aria-label="Selecionar grupo"><option value="__all">Todos os grupos</option></select>
+      <button id="loadBtn" aria-label="Carregar lista de canais">Carregar lista</button>
+      <div id="loading" class="muted" style="display:none;">Carregando lista...</div>
+      <strong>Canais</strong>
+      <div class="groups" id="groupsContainer"></div>
+    </aside>
+
+    <main class="main">
+      <div class="player-wrap">
+        <video id="player" controls playsinline></video>
+        <div class="meta">
+          <div>
+            <div id="currentTitle" style="font-weight:600">Nenhum canal selecionado</div>
+            <div class="muted" id="currentGroup">—</div>
+          </div>
+          <div class="controls">
+            <button id="fullscreenBtn">Tela cheia</button>
+            <button id="openInNew">Abrir em nova aba</button>
+          </div>
+        </div>
+        <div id="channels" class="channel-list"></div>
+      </div>
+    </main>
+  </div>
+
+  <script src="scripts/app.js"></script>
+</body>
+</html>
