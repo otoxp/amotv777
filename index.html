@@ -1,58 +1,191 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>IPTV Copilot</title>
-  <meta name="description" content="Painel IPTV moderno e seguro — IPTV Copilot" />
-  <link rel="manifest" href="manifest.json">
-  <meta name="theme-color" content="#2143a8">
-  <link rel="icon" href="assets/icon-192.png" />
-  <link rel="stylesheet" href="styles/main.css" />
-  <script src="https://cdn.jsdelivr.net/npm/hls.js@1.5.0/dist/hls.min.js"></script>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>IPTV Web Player</title>
+  <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
+
+  <style>
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      background-color: #000;
+      color: #fff;
+    }
+
+    header {
+      background: linear-gradient(90deg, #111, #222);
+      padding: 12px;
+      text-align: center;
+      font-size: 1.7em;
+      letter-spacing: 1px;
+      border-bottom: 2px solid #333;
+    }
+
+    main {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 15px;
+    }
+
+    video {
+      width: 95%;
+      max-width: 900px;
+      background: #000;
+      border: 3px solid #222;
+      border-radius: 10px;
+      box-shadow: 0 0 20px #000;
+    }
+
+    #controles {
+      margin: 15px 0;
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+
+    select, input[type="text"], button {
+      padding: 10px;
+      font-size: 1em;
+      border-radius: 6px;
+      border: none;
+      background-color: #111;
+      color: #fff;
+      min-width: 160px;
+      transition: 0.3s;
+    }
+
+    select:hover, input:hover, button:hover {
+      background-color: #222;
+    }
+
+    button {
+      background: #444;
+      cursor: pointer;
+      font-weight: bold;
+    }
+
+    button:hover {
+      background: #666;
+    }
+
+    #canal-info {
+      margin-top: 10px;
+      font-size: 1.1em;
+      text-shadow: 0 0 5px #0f0;
+      color: #0f0;
+    }
+  </style>
 </head>
+
 <body>
-  <div class="topbar">
-    <div class="logo">
-      <img src="assets/logo.png" alt="IPTV Copilot logo">
-      <div>
-        <div class="brand">IPTV Copilot</div>
-        <div class="subtitle">Seu painel pessoal de IPTV — seguro e moderno</div>
-      </div>
+  <header>📺 IPTV Web Player</header>
+
+  <main>
+    <video id="player" controls></video>
+
+    <div id="controles">
+      <select id="grupoSelect"></select>
+      <select id="canalSelect"></select>
+      <input type="text" id="busca" placeholder="🔍 Buscar canal...">
+      <button onclick="tocarCanal()">▶️ Assistir</button>
+      <button onclick="telaCheia()">🖥️ Tela cheia</button>
     </div>
-  </div>
 
-  <div class="app">
-    <aside class="sidebar">
-      <div class="muted">Cole sua URL M3U ou envie um arquivo local.</div>
-      <input id="m3uUrl" placeholder="Colar URL M3U (opcional)" aria-label="URL M3U" />
-      <input id="fileInput" type="file" accept=".m3u,.txt" aria-label="Arquivo M3U" />
-      <input id="search" placeholder="Buscar canal..." aria-label="Buscar canal" />
-      <select id="groupSelect" aria-label="Selecionar grupo"><option value="__all">Todos os grupos</option></select>
-      <button id="loadBtn" aria-label="Carregar lista de canais">Carregar lista</button>
-      <div id="loading" class="muted" style="display:none;">Carregando lista...</div>
-      <strong>Canais</strong>
-      <div class="groups" id="groupsContainer"></div>
-    </aside>
+    <div id="canal-info"></div>
+  </main>
 
-    <main class="main">
-      <div class="player-wrap">
-        <video id="player" controls playsinline></video>
-        <div class="meta">
-          <div>
-            <div id="currentTitle" style="font-weight:600">Nenhum canal selecionado</div>
-            <div class="muted" id="currentGroup">—</div>
-          </div>
-          <div class="controls">
-            <button id="fullscreenBtn">Tela cheia</button>
-            <button id="openInNew">Abrir em nova aba</button>
-          </div>
-        </div>
-        <div id="channels" class="channel-list"></div>
-      </div>
-    </main>
-  </div>
+  <script>
+    const listaURL = 'https://tinyurl.com/w777tv';
+    const player = document.getElementById('player');
+    const grupoSelect = document.getElementById('grupoSelect');
+    const canalSelect = document.getElementById('canalSelect');
+    const buscaInput = document.getElementById('busca');
+    const canalInfo = document.getElementById('canal-info');
 
-  <script src="scripts/app.js"></script>
+    let canaisPorGrupo = {};
+    let hlsInstance = null;
+
+    // Carregar Lista M3U
+    async function carregarLista() {
+      const resposta = await fetch(listaURL);
+      const texto = await resposta.text();
+      const linhas = texto.split('\n');
+
+      for (let i = 0; i < linhas.length; i++) {
+        if (linhas[i].startsWith('#EXTINF')) {
+          const grupo = linhas[i].match(/group-title="([^"]+)"/);
+          const nome = linhas[i].split(',').pop();
+          const url = linhas[i + 1];
+
+          if (grupo && nome && url) {
+            const nomeGrupo = grupo[1];
+            if (!canaisPorGrupo[nomeGrupo]) canaisPorGrupo[nomeGrupo] = [];
+            canaisPorGrupo[nomeGrupo].push({ nome, url });
+          }
+        }
+      }
+
+      grupoSelect.innerHTML =
+        Object.keys(canaisPorGrupo)
+          .sort()
+          .map(g => `<option>${g}</option>`)
+          .join('');
+
+      grupoSelect.onchange = atualizarCanais;
+      buscaInput.oninput = atualizarCanais;
+
+      atualizarCanais();
+    }
+
+    // Atualizar lista de canais
+    function atualizarCanais() {
+      const grupo = grupoSelect.value;
+      const busca = buscaInput.value.toLowerCase();
+      const canais = canaisPorGrupo[grupo] || [];
+
+      canalSelect.innerHTML = canais
+        .filter(c => c.nome.toLowerCase().includes(busca))
+        .map(c => `<option value="${c.url}">${c.nome}</option>`)
+        .join('');
+    }
+
+    // Reproduzir canal
+    function tocarCanal() {
+      const url = canalSelect.value;
+      const nome = canalSelect.options[canalSelect.selectedIndex].text;
+
+      canalInfo.textContent = `Reproduzindo: ${nome}`;
+
+      if (hlsInstance) {
+        hlsInstance.destroy();
+        hlsInstance = null;
+      }
+
+      if (Hls.isSupported()) {
+        hlsInstance = new Hls();
+        hlsInstance.loadSource(url);
+        hlsInstance.attachMedia(player);
+        hlsInstance.on(Hls.Events.MANIFEST_PARSED, () => player.play());
+      } else if (player.canPlayType('application/vnd.apple.mpegurl')) {
+        player.src = url;
+        player.play();
+      } else {
+        alert('Este navegador não suporta HLS.');
+      }
+    }
+
+    // Tela cheia
+    function telaCheia() {
+      if (player.requestFullscreen) player.requestFullscreen();
+      else if (player.webkitRequestFullscreen) player.webkitRequestFullscreen();
+    }
+
+    carregarLista();
+  </script>
+
 </body>
 </html>
