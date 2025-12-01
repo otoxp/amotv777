@@ -1,191 +1,110 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>IPTV Web Player</title>
-  <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 
-  <style>
-    body {
-      margin: 0;
-      font-family: Arial, sans-serif;
-      background-color: #000;
-      color: #fff;
-    }
+<link rel="manifest" href="/youtube777/manifest.json"/>
+<link rel="icon" type="image/png" sizes="192x192" href="/youtube777/icons/logo-192.png"/>
+<link rel="apple-touch-icon" href="/youtube777/icons/logo-512.png"/>
+<meta name="theme-color" content="#ff0000"/>
 
-    header {
-      background: linear-gradient(90deg, #111, #222);
-      padding: 12px;
-      text-align: center;
-      font-size: 1.7em;
-      letter-spacing: 1px;
-      border-bottom: 2px solid #333;
-    }
+<title>Buscador YouTube Amorim</title>
 
-    main {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      padding: 15px;
-    }
-
-    video {
-      width: 95%;
-      max-width: 900px;
-      background: #000;
-      border: 3px solid #222;
-      border-radius: 10px;
-      box-shadow: 0 0 20px #000;
-    }
-
-    #controles {
-      margin: 15px 0;
-      display: flex;
-      gap: 10px;
-      flex-wrap: wrap;
-      justify-content: center;
-    }
-
-    select, input[type="text"], button {
-      padding: 10px;
-      font-size: 1em;
-      border-radius: 6px;
-      border: none;
-      background-color: #111;
-      color: #fff;
-      min-width: 160px;
-      transition: 0.3s;
-    }
-
-    select:hover, input:hover, button:hover {
-      background-color: #222;
-    }
-
-    button {
-      background: #444;
-      cursor: pointer;
-      font-weight: bold;
-    }
-
-    button:hover {
-      background: #666;
-    }
-
-    #canal-info {
-      margin-top: 10px;
-      font-size: 1.1em;
-      text-shadow: 0 0 5px #0f0;
-      color: #0f0;
-    }
-  </style>
+<style>
+body { background:#111;color:#fff;font-family:Arial;margin:0;padding:20px;transition:0.3s; }
+.light {background:#f2f2f2;color:#000;}
+h1{text-align:center;color:#ff0000;margin-top:0;}
+.controls {display:flex;gap:10px;flex-wrap:wrap;margin-bottom:20px;}
+.controls input, .controls button {padding:12px;font-size:16px;border:none;border-radius:6px;}
+.controls input{flex:1;background:#222;color:#fff;}
+.light .controls input{background:#ddd;color:#000;}
+.controls button{background:#ff0000;color:white;cursor:pointer;}
+#toggle{background:#444;}
+.light #toggle{background:#999;color:black;}
+.grid {display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:20px;}
+.card {background:#1a1a1a;border-radius:12px;padding:12px;box-shadow:0 0 10px #000;transition:0.3s;}
+.light .card{background:#fff;box-shadow:0 0 10px #999;}
+.card:hover {transform:scale(1.03);}
+.card img {width:100%;border-radius:10px;cursor:pointer;}
+.downloads button {padding:8px;margin-top:6px;margin-right:6px;background:#333;color:white;border:none;border-radius:6px;cursor:pointer;}
+.light .downloads button{background:#666;}
+#loader{text-align:center;margin:10px;font-size:18px;display:none;}
+</style>
 </head>
 
 <body>
-  <header>📺 IPTV Web Player</header>
 
-  <main>
-    <video id="player" controls></video>
+<h1>Buscador YouTube Amorim</h1>
 
-    <div id="controles">
-      <select id="grupoSelect"></select>
-      <select id="canalSelect"></select>
-      <input type="text" id="busca" placeholder="🔍 Buscar canal...">
-      <button onclick="tocarCanal()">▶️ Assistir</button>
-      <button onclick="telaCheia()">🖥️ Tela cheia</button>
+<div class="controls">
+ <input id="query" placeholder="Buscar vídeos..."/>
+ <button onclick="buscarVideos(true)">Buscar</button>
+ <button id="toggle" onclick="document.body.classList.toggle('light')">Modo Claro/Escuro</button>
+</div>
+
+<div id="loader">🔎 Carregando…</div>
+
+<div id="resultados" class="grid"></div>
+
+<script>
+const API_KEY="AIzaSyCdYsIw8W9CyV2GF9w7a96eeIAMOyH5TxU";
+let nextPageToken="";
+let loading=false;
+
+function cardHTML(v){
+  const id=v.id.videoId;
+  const t=v.snippet.title;
+  const img=v.snippet.thumbnails.high.url;
+
+  return `
+  <div class='card'>
+    <img src='${img}' onclick="window.open('https://y2meta.is/pt/youtube/${id}','_blank')"/>
+    <h3>${t}</h3>
+    <div class='downloads'>
+      <button onclick="window.open('https://www.yout-ube.com/watch?v=${id}','_blank')">MP4</button>
+      <button onclick="window.open('https://y2meta.is/?url=https://www.youtube.com/watch?v=${id}','_blank')">MP3</button>
+      <button onclick="window.open('https://downsub.com/?url=https://www.youtube.com/watch?v=${id}','_blank')">Legenda (VTT)</button>
     </div>
+  </div>`;
+}
 
-    <div id="canal-info"></div>
-  </main>
+function buscarVideos(reset=true){
+  const q=document.getElementById("query").value.trim();
+  if(!q) return alert("Digite algo");
 
-  <script>
-    const listaURL = 'https://tinyurl.com/w777tv';
-    const player = document.getElementById('player');
-    const grupoSelect = document.getElementById('grupoSelect');
-    const canalSelect = document.getElementById('canalSelect');
-    const buscaInput = document.getElementById('busca');
-    const canalInfo = document.getElementById('canal-info');
+  if(loading) return;
+  loading=true;
+  document.getElementById("loader").style.display="block";
 
-    let canaisPorGrupo = {};
-    let hlsInstance = null;
+  if(reset){
+    document.getElementById("resultados").innerHTML="";
+    nextPageToken="";
+  }
 
-    // Carregar Lista M3U
-    async function carregarLista() {
-      const resposta = await fetch(listaURL);
-      const texto = await resposta.text();
-      const linhas = texto.split('\n');
+  let url=`https://www.googleapis.com/youtube/v3/search?part=snippet&type=video&maxResults=25&q=${encodeURIComponent(q)}&key=${API_KEY}`;
+  if(nextPageToken) url+=`&pageToken=${nextPageToken}`;
 
-      for (let i = 0; i < linhas.length; i++) {
-        if (linhas[i].startsWith('#EXTINF')) {
-          const grupo = linhas[i].match(/group-title="([^"]+)"/);
-          const nome = linhas[i].split(',').pop();
-          const url = linhas[i + 1];
+  fetch(url).then(r=>r.json()).then(data=>{
+    nextPageToken=data.nextPageToken||"";
+    const box=document.getElementById("resultados");
+    data.items.forEach(v=> box.innerHTML += cardHTML(v));
+  }).finally(()=>{
+    loading=false;
+    document.getElementById("loader").style.display="none";
+  });
+}
 
-          if (grupo && nome && url) {
-            const nomeGrupo = grupo[1];
-            if (!canaisPorGrupo[nomeGrupo]) canaisPorGrupo[nomeGrupo] = [];
-            canaisPorGrupo[nomeGrupo].push({ nome, url });
-          }
-        }
-      }
+window.addEventListener("scroll",()=>{
+  if(window.innerHeight+window.scrollY >= document.body.offsetHeight-150){
+    if(nextPageToken) buscarVideos(false);
+  }
+});
 
-      grupoSelect.innerHTML =
-        Object.keys(canaisPorGrupo)
-          .sort()
-          .map(g => `<option>${g}</option>`)
-          .join('');
-
-      grupoSelect.onchange = atualizarCanais;
-      buscaInput.oninput = atualizarCanais;
-
-      atualizarCanais();
-    }
-
-    // Atualizar lista de canais
-    function atualizarCanais() {
-      const grupo = grupoSelect.value;
-      const busca = buscaInput.value.toLowerCase();
-      const canais = canaisPorGrupo[grupo] || [];
-
-      canalSelect.innerHTML = canais
-        .filter(c => c.nome.toLowerCase().includes(busca))
-        .map(c => `<option value="${c.url}">${c.nome}</option>`)
-        .join('');
-    }
-
-    // Reproduzir canal
-    function tocarCanal() {
-      const url = canalSelect.value;
-      const nome = canalSelect.options[canalSelect.selectedIndex].text;
-
-      canalInfo.textContent = `Reproduzindo: ${nome}`;
-
-      if (hlsInstance) {
-        hlsInstance.destroy();
-        hlsInstance = null;
-      }
-
-      if (Hls.isSupported()) {
-        hlsInstance = new Hls();
-        hlsInstance.loadSource(url);
-        hlsInstance.attachMedia(player);
-        hlsInstance.on(Hls.Events.MANIFEST_PARSED, () => player.play());
-      } else if (player.canPlayType('application/vnd.apple.mpegurl')) {
-        player.src = url;
-        player.play();
-      } else {
-        alert('Este navegador não suporta HLS.');
-      }
-    }
-
-    // Tela cheia
-    function telaCheia() {
-      if (player.requestFullscreen) player.requestFullscreen();
-      else if (player.webkitRequestFullscreen) player.webkitRequestFullscreen();
-    }
-
-    carregarLista();
-  </script>
+if("serviceWorker" in navigator){
+  navigator.serviceWorker.register('/youtube777/service-worker.js');
+}
+</script>
 
 </body>
 </html>
