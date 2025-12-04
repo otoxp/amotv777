@@ -1,277 +1,192 @@
+
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-  <meta charset="UTF-8" />
-  <title>IPTV Player Responsivo</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>IPTV Web Player</title>
   <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <style>
-    * {
-      box-sizing: border-box;
-    }
 
+  <style>
     body {
       margin: 0;
-      font-family: sans-serif;
-      background: #111;
-      color: white;
-      display: flex;
-      flex-direction: column;
-      height: 100vh;
+      font-family: Arial, sans-serif;
+      background-color: #000;
+      color: #fff;
     }
 
     header {
-      padding: 10px;
-      background: #222;
-      display: flex;
-      flex-wrap: wrap;
-      gap: 10px;
-      justify-content: center;
-      align-items: center;
+      background: linear-gradient(90deg, #111, #222);
+      padding: 12px;
+      text-align: center;
+      font-size: 1.7em;
+      letter-spacing: 1px;
+      border-bottom: 2px solid #333;
     }
 
-    input[type="text"] {
-      flex: 1;
-      min-width: 200px;
-      padding: 5px;
-      border-radius: 5px;
-      border: none;
-    }
-
-    input[type="file"],
-    button {
-      padding: 6px 10px;
-      background: #333;
-      color: white;
-      border: none;
-      border-radius: 5px;
-      cursor: pointer;
-    }
-
-    .container {
-      display: flex;
-      flex: 1;
-      flex-direction: row;
-    }
-
-    .sidebar {
-      width: 150px;
-      background: #222;
+    main {
       display: flex;
       flex-direction: column;
-      padding: 10px;
-    }
-
-    .sidebar button {
-      margin: 5px 0;
-      padding: 10px;
-      background: #333;
-      color: white;
-      border: none;
-      border-radius: 5px;
-      cursor: pointer;
-    }
-
-    .player-container {
-      flex: 1;
-      display: flex;
-      flex-direction: column;
-      padding: 10px;
       align-items: center;
+      padding: 15px;
     }
 
     video {
-      width: 100%;
-      max-height: 60vh;
-      background: black;
-      border-radius: 8px;
+      width: 95%;
+      max-width: 900px;
+      background: #000;
+      border: 3px solid #222;
+      border-radius: 10px;
+      box-shadow: 0 0 20px #000;
     }
 
-    .search-bar {
-      margin-top: 10px;
-      width: 100%;
-      max-width: 400px;
-    }
-
-    .search-bar input {
-      width: 100%;
-      padding: 8px;
-      border-radius: 5px;
-      border: none;
-    }
-
-    .channel-navigator {
+    #controles {
+      margin: 15px 0;
       display: flex;
       gap: 10px;
-      margin-top: 10px;
       flex-wrap: wrap;
       justify-content: center;
     }
 
-    .channel-navigator button {
-      background: #444;
+    select, input[type="text"], button {
       padding: 10px;
-      border-radius: 5px;
-      cursor: pointer;
+      font-size: 1em;
+      border-radius: 6px;
       border: none;
-      color: white;
+      background-color: #111;
+      color: #fff;
+      min-width: 160px;
+      transition: 0.3s;
     }
 
-    /* 📱 Responsivo para mobile */
-    @media (max-width: 768px) {
-      .container {
-        flex-direction: column;
-      }
+    select:hover, input:hover, button:hover {
+      background-color: #222;
+    }
 
-      .sidebar {
-        flex-direction: row;
-        overflow-x: auto;
-        width: 100%;
-      }
+    button {
+      background: #444;
+      cursor: pointer;
+      font-weight: bold;
+    }
 
-      .sidebar button {
-        flex: 1;
-        margin: 5px;
-        white-space: nowrap;
-      }
+    button:hover {
+      background: #666;
+    }
 
-      .channel-navigator {
-        justify-content: flex-start;
-        overflow-x: auto;
-      }
-
-      video {
-        max-height: 40vh;
-      }
+    #canal-info {
+      margin-top: 10px;
+      font-size: 1.1em;
+      text-shadow: 0 0 5px #0f0;
+      color: #0f0;
     }
   </style>
 </head>
+
 <body>
+  <header>📺 IPTV Web Player</header>
 
-  <header>
-    <input type="text" id="urlInput" placeholder="Cole a URL da sua lista .m3u">
-    <button onclick="loadFromURL()">Carregar</button>
-    <input type="file" id="fileInput" accept=".m3u">
-  </header>
+  <main>
+    <video id="player" controls></video>
 
-  <div class="container">
-    <div class="sidebar" id="groupList"></div>
-
-    <div class="player-container">
-      <video id="player" controls></video>
-
-      <div class="search-bar">
-        <input type="text" id="searchInput" placeholder="Buscar canal..." oninput="filterChannels()">
-      </div>
-
-      <div class="channel-navigator" id="channelList"></div>
+    <div id="controles">
+      <select id="grupoSelect"></select>
+      <select id="canalSelect"></select>
+      <input type="text" id="busca" placeholder="🔍 Buscar canal...">
+      <button onclick="tocarCanal()">▶️ Assistir</button>
+      <button onclick="telaCheia()">🖥️ Tela cheia</button>
     </div>
-  </div>
+
+    <div id="canal-info"></div>
+  </main>
 
   <script>
-    let channels = [];
-    let currentGroup = '';
-    let groupChannels = [];
+    const listaURL = 'https://tinyurl.com/w777tv';
+    const player = document.getElementById('player');
+    const grupoSelect = document.getElementById('grupoSelect');
+    const canalSelect = document.getElementById('canalSelect');
+    const buscaInput = document.getElementById('busca');
+    const canalInfo = document.getElementById('canal-info');
 
-    document.getElementById('fileInput').addEventListener('change', function (e) {
-      const file = e.target.files[0];
-      const reader = new FileReader();
-      reader.onload = function () {
-        parseM3U(reader.result);
-      };
-      reader.readAsText(file);
-    });
+    let canaisPorGrupo = {};
+    let hlsInstance = null;
 
-    async function loadFromURL() {
-      const url = document.getElementById('urlInput').value;
-      if (!url) return alert("Informe uma URL!");
-      try {
-        const res = await fetch(url);
-        const text = await res.text();
-        parseM3U(text);
-      } catch (err) {
-        alert("Erro ao carregar a lista: " + err);
-      }
-    }
+    // Carregar Lista M3U
+    async function carregarLista() {
+      const resposta = await fetch(listaURL);
+      const texto = await resposta.text();
+      const linhas = texto.split('\n');
 
-    function parseM3U(content) {
-      const lines = content.split('\n');
-      let current = {};
-      channels = [];
+      for (let i = 0; i < linhas.length; i++) {
+        if (linhas[i].startsWith('#EXTINF')) {
+          const grupo = linhas[i].match(/group-title="([^"]+)"/);
+          const nome = linhas[i].split(',').pop();
+          const url = linhas[i + 1];
 
-      for (let i = 0; i < lines.length; i++) {
-        const line = lines[i].trim();
-        if (line.startsWith('#EXTINF')) {
-          const groupMatch = line.match(/group-title="(.*?)"/);
-          const nameMatch = line.match(/,(.*)$/);
-          current = {
-            name: nameMatch ? nameMatch[1] : 'Sem nome',
-            group: groupMatch ? groupMatch[1] : 'Sem grupo'
-          };
-        } else if (line.startsWith('http')) {
-          current.url = line;
-          channels.push({ ...current });
+          if (grupo && nome && url) {
+            const nomeGrupo = grupo[1];
+            if (!canaisPorGrupo[nomeGrupo]) canaisPorGrupo[nomeGrupo] = [];
+            canaisPorGrupo[nomeGrupo].push({ nome, url });
+          }
         }
       }
 
-      renderGroups();
+      grupoSelect.innerHTML =
+        Object.keys(canaisPorGrupo)
+          .sort()
+          .map(g => `<option>${g}</option>`)
+          .join('');
+
+      grupoSelect.onchange = atualizarCanais;
+      buscaInput.oninput = atualizarCanais;
+
+      atualizarCanais();
     }
 
-    function renderGroups() {
-      const groupList = document.getElementById('groupList');
-      const uniqueGroups = [...new Set(channels.map(c => c.group))];
-      groupList.innerHTML = '';
-      uniqueGroups.forEach(group => {
-        const btn = document.createElement('button');
-        btn.textContent = group;
-        btn.onclick = () => {
-          currentGroup = group;
-          renderChannels(group);
-        };
-        groupList.appendChild(btn);
-      });
+    // Atualizar lista de canais
+    function atualizarCanais() {
+      const grupo = grupoSelect.value;
+      const busca = buscaInput.value.toLowerCase();
+      const canais = canaisPorGrupo[grupo] || [];
 
-      if (uniqueGroups.length > 0) {
-        currentGroup = uniqueGroups[0];
-        renderChannels(currentGroup);
+      canalSelect.innerHTML = canais
+        .filter(c => c.nome.toLowerCase().includes(busca))
+        .map(c => `<option value="${c.url}">${c.nome}</option>`)
+        .join('');
+    }
+
+    // Reproduzir canal
+    function tocarCanal() {
+      const url = canalSelect.value;
+      const nome = canalSelect.options[canalSelect.selectedIndex].text;
+
+      canalInfo.textContent = `Reproduzindo: ${nome}`;
+
+      if (hlsInstance) {
+        hlsInstance.destroy();
+        hlsInstance = null;
       }
-    }
 
-    function renderChannels(group) {
-      groupChannels = channels.filter(c => c.group === group);
-      document.getElementById('searchInput').value = "";
-      displayChannels(groupChannels);
-    }
-
-    function displayChannels(list) {
-      const channelList = document.getElementById('channelList');
-      channelList.innerHTML = '';
-      list.forEach(channel => {
-        const btn = document.createElement('button');
-        btn.textContent = channel.name;
-        btn.onclick = () => playChannel(channel.url);
-        channelList.appendChild(btn);
-      });
-    }
-
-    function filterChannels() {
-      const input = document.getElementById('searchInput').value.toLowerCase();
-      const filtered = groupChannels.filter(c => c.name.toLowerCase().includes(input));
-      displayChannels(filtered);
-    }
-
-    function playChannel(url) {
-      const video = document.getElementById('player');
       if (Hls.isSupported()) {
-        const hls = new Hls();
-        hls.loadSource(url);
-        hls.attachMedia(video);
-      } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
-        video.src = url;
+        hlsInstance = new Hls();
+        hlsInstance.loadSource(url);
+        hlsInstance.attachMedia(player);
+        hlsInstance.on(Hls.Events.MANIFEST_PARSED, () => player.play());
+      } else if (player.canPlayType('application/vnd.apple.mpegurl')) {
+        player.src = url;
+        player.play();
       } else {
         alert('Este navegador não suporta HLS.');
       }
     }
+
+    // Tela cheia
+    function telaCheia() {
+      if (player.requestFullscreen) player.requestFullscreen();
+      else if (player.webkitRequestFullscreen) player.webkitRequestFullscreen();
+    }
+
+    carregarLista();
   </script>
+
 </body>
 </html>
