@@ -1,192 +1,648 @@
-
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>IPTV Web Player</title>
-  <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AMOTV777 – IPTV Web</title>
 
-  <style>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
+
+<style>
     body {
-      margin: 0;
-      font-family: Arial, sans-serif;
-      background-color: #000;
-      color: #fff;
+        margin: 0;
+        font-family: 'Inter', sans-serif;
+        background: #0f1117; /* escuro padrão */
+        color: #e5e5e5;
+        display: flex;
+        height: 100vh;
+        overflow: hidden;
     }
 
-    header {
-      background: linear-gradient(90deg, #111, #222);
-      padding: 12px;
-      text-align: center;
-      font-size: 1.7em;
-      letter-spacing: 1px;
-      border-bottom: 2px solid #333;
+    /* MENU LATERAL */
+    #sidebar {
+        width: 240px;
+        background: #111827;
+        color: white;
+        padding: 20px;
+        overflow-y: auto;
+    }
+    #sidebar h2 {
+        font-size: 20px;
+        margin-bottom: 15px;
+        text-align: center;
+    }
+    .groupBtn {
+        background: rgba(255,255,255,0.1);
+        padding: 10px;
+        border-radius: 6px;
+        margin-bottom: 8px;
+        cursor: pointer;
+        transition: 0.2s;
+        font-size: 14px;
+    }
+    .groupBtn:hover {
+        background: rgba(255,255,255,0.2);
     }
 
-    main {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      padding: 15px;
+    /* ÁREA PRINCIPAL */
+    #main {
+        flex: 1;
+        padding: 15px;
+        overflow-y: auto;
     }
 
-    video {
-      width: 95%;
-      max-width: 900px;
-      background: #000;
-      border: 3px solid #222;
-      border-radius: 10px;
-      box-shadow: 0 0 20px #000;
+    /* Loader Box */
+    .loaderBox {
+        background: #1f2937;
+        padding: 18px;
+        border-radius: 10px;
+        margin-bottom: 20px;
+        text-align: center;
+        color: #e5e5e5;
     }
 
-    #controles {
-      margin: 15px 0;
-      display: flex;
-      gap: 10px;
-      flex-wrap: wrap;
-      justify-content: center;
+    input[type="text"] {
+        width: 80%;
+        padding: 10px;
+        border-radius: 6px;
+        border: 1px solid #374151;
+        background: #111827;
+        color: #e5e5e5;
+        margin-bottom: 12px;
+        font-size: 15px;
     }
-
-    select, input[type="text"], button {
-      padding: 10px;
-      font-size: 1em;
-      border-radius: 6px;
-      border: none;
-      background-color: #111;
-      color: #fff;
-      min-width: 160px;
-      transition: 0.3s;
-    }
-
-    select:hover, input:hover, button:hover {
-      background-color: #222;
-    }
-
     button {
-      background: #444;
-      cursor: pointer;
-      font-weight: bold;
+        background: #2563eb;
+        color: #fff;
+        padding: 8px 18px;
+        border: none;
+        border-radius: 6px;
+        cursor: pointer;
+        font-size: 15px;
     }
 
-    button:hover {
-      background: #666;
+    /* Busca */
+    #searchBox {
+        width: 100%;
+        padding: 12px;
+        margin: 10px 0 15px 0;
+        font-size: 16px;
+        border-radius: 8px;
+        border: 1px solid #374151;
+        background: #111827;
+        color: #e5e5e5;
     }
 
-    #canal-info {
-      margin-top: 10px;
-      font-size: 1.1em;
-      text-shadow: 0 0 5px #0f0;
-      color: #0f0;
+    /* Player */
+    #playerBox {
+        display: none;
+        margin-bottom: 15px;
     }
-  </style>
+    video {
+        width: 100%;
+        max-height: 55vh;
+        background: #000;
+    }
+
+    /* EPG */
+    #epgBox {
+        display: none;
+        background: #1f2937;
+        border-radius: 10px;
+        padding: 12px 15px;
+        margin-bottom: 18px;
+        font-size: 14px;
+        color: #e5e5e5;
+    }
+    #epgBox h3 {
+        margin: 0 0 4px 0;
+        font-size: 16px;
+    }
+    #epgBox h4 {
+        margin: 0 0 8px 0;
+        font-size: 15px;
+        color: #cbd5e1;
+    }
+    .epg-section {
+        margin-bottom: 8px;
+    }
+    .epg-title {
+        font-weight: 600;
+    }
+    .epg-time {
+        font-size: 13px;
+        color: #94a3b8;
+    }
+    .epg-desc {
+        font-size: 13px;
+        color: #cbd5e1;
+        margin-top: 3px;
+    }
+    .epg-progress-bar {
+        width: 100%;
+        height: 6px;
+        background: #374151;
+        border-radius: 999px;
+        overflow: hidden;
+        margin-top: 5px;
+    }
+    .epg-progress-fill {
+        height: 100%;
+        background: #60a5fa;
+        width: 0%;
+        transition: width 0.3s;
+    }
+
+    /* Grid de canais */
+    .grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+        gap: 18px;
+    }
+    .card {
+        background: #1f2937;
+        padding: 12px;
+        border-radius: 12px;
+        text-align: center;
+        transition: 0.2s;
+        font-size: 14px;
+        color: #e5e5e5;
+    }
+    .card:hover {
+        transform: scale(1.04);
+        background: #374151;
+    }
+    .logo {
+        height: 55px;
+        margin-bottom: 8px;
+        width: 100%;
+        object-fit: contain;
+        filter: brightness(0.9);
+    }
+
+    @media (max-width: 768px) {
+        body {
+            flex-direction: column;
+            height: auto;
+        }
+        #sidebar {
+            width: 100%;
+            display: flex;
+            overflow-x: auto;
+        }
+        #sidebar h2 {
+            display: none;
+        }
+        #groupList {
+            display: flex;
+            gap: 8px;
+        }
+        .groupBtn {
+            white-space: nowrap;
+        }
+    }
+
+    /* TEMA CLARO (APENAS DE DIA) */
+    body.light {
+        background: #eef2f9;
+        color: #111827;
+    }
+    body.light #sidebar {
+        background: #0a63ff;
+        color: white;
+    }
+    body.light .loaderBox,
+    body.light #epgBox,
+    body.light .card {
+        background: white;
+        color: #111827;
+    }
+    body.light input,
+    body.light #searchBox {
+        background: white;
+        color: #111827;
+        border: 1px solid #ccc;
+    }
+    body.light .epg-progress-bar {
+        background: #e0e4f0;
+    }
+    body.light .epg-progress-fill {
+        background: #0a63ff;
+    }
+    body.light button {
+        background: #0a63ff;
+    }
+</style>
 </head>
 
 <body>
-  <header>📺 IPTV Web Player</header>
 
-  <main>
-    <video id="player" controls></video>
+<!-- MENU LATERAL -->
+<div id="sidebar">
+    <h2>AMOTV777</h2>
+    <div id="groupList">Carregando...</div>
+</div>
 
-    <div id="controles">
-      <select id="grupoSelect"></select>
-      <select id="canalSelect"></select>
-      <input type="text" id="busca" placeholder="🔍 Buscar canal...">
-      <button onclick="tocarCanal()">▶️ Assistir</button>
-      <button onclick="telaCheia()">🖥️ Tela cheia</button>
+<!-- ÁREA PRINCIPAL -->
+<div id="main">
+
+    <!-- Box para carregar lista -->
+    <div class="loaderBox">
+        <h3>AMOTV777 – Carregar Lista M3U / Link Encurtado</h3>
+
+        <input id="urlInput" type="text" placeholder="Cole aqui a URL da lista (M3U/TinyURL)">
+        <br>
+        <button onclick="loadFromURL()">Carregar Lista</button>
+
+        <hr style="margin:20px 0;">
+
+        <h4>Ou escolha um arquivo .m3u</h4>
+        <input type="file" id="fileInput" accept=".m3u,.m3u8" onchange="loadFromFile(event)">
     </div>
 
-    <div id="canal-info"></div>
-  </main>
+    <!-- Busca -->
+    <input type="text" id="searchBox" placeholder="Buscar canal..." onkeyup="filtrarCanais()">
 
-  <script>
-    const listaURL = 'https://tinyurl.com/w777tv';
-    const player = document.getElementById('player');
-    const grupoSelect = document.getElementById('grupoSelect');
-    const canalSelect = document.getElementById('canalSelect');
-    const buscaInput = document.getElementById('busca');
-    const canalInfo = document.getElementById('canal-info');
+    <!-- Player -->
+    <div id="playerBox">
+        <video id="player" controls></video>
+    </div>
 
-    let canaisPorGrupo = {};
-    let hlsInstance = null;
+    <!-- EPG -->
+    <div id="epgBox"></div>
 
-    // Carregar Lista M3U
-    async function carregarLista() {
-      const resposta = await fetch(listaURL);
-      const texto = await resposta.text();
-      const linhas = texto.split('\n');
+    <!-- Grade -->
+    <div class="grid" id="canalGrid"></div>
 
-      for (let i = 0; i < linhas.length; i++) {
-        if (linhas[i].startsWith('#EXTINF')) {
-          const grupo = linhas[i].match(/group-title="([^"]+)"/);
-          const nome = linhas[i].split(',').pop();
-          const url = linhas[i + 1];
+</div>
 
-          if (grupo && nome && url) {
-            const nomeGrupo = grupo[1];
-            if (!canaisPorGrupo[nomeGrupo]) canaisPorGrupo[nomeGrupo] = [];
-            canaisPorGrupo[nomeGrupo].push({ nome, url });
-          }
+<!-- HLS SCRIPT -->
+<script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
+<script>
+// ===============================
+// CONFIG E VARIÁVEIS GLOBAIS
+// ===============================
+const EPG_URL = "https://raw.githubusercontent.com/otoxp/wepg/refs/heads/main/guide.xml";
+
+let canais = [];
+let grupoAtual = "Todos";
+
+// EPG
+let epgLoaded = false;
+let epgLoading = false;
+let epgChannels = {};
+let epgProgrammesByChannel = {};
+let epgNameIndex = {};
+let pendingEPGChannel = null;
+
+
+// ===============================
+// CARREGAR LISTA VIA URL
+// ===============================
+async function loadFromURL() {
+    const link = document.getElementById("urlInput").value.trim();
+    if (!link) return alert("Insira uma URL válida!");
+
+    try {
+        const response = await fetch(link);
+        const text = await response.text();
+        parseM3U(text);
+    } catch (e) {
+        console.error(e);
+        alert("Falha ao carregar lista!");
+    }
+}
+
+// ===============================
+// CARREGAR LISTA VIA ARQUIVO
+// ===============================
+function loadFromFile(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = e => parseM3U(e.target.result);
+    reader.readAsText(file);
+}
+
+// ===============================
+// PARSE M3U
+// ===============================
+function parseM3U(text) {
+    const lines = text.split("\n");
+    canais = [];
+    let canal = {};
+
+    lines.forEach(l => {
+        l = l.trim();
+
+        if (l.startsWith("#EXTINF")) {
+            const logo = l.match(/tvg-logo="(.*?)"/);
+            const group = l.match(/group-title="(.*?)"/);
+            const id = l.match(/tvg-id="(.*?)"/);
+            const name = l.split(",")[1];
+
+            canal = {
+                nome: name || "Sem nome",
+                grupo: group ? group[1] : "Outros",
+                logo: logo ? logo[1] : "",
+                tvgId: id ? id[1] : "",
+            };
+
+        } else if (l.startsWith("http")) {
+            canal.url = l;
+            canal.idx = canais.length;
+            canais.push(canal);
         }
-      }
+    });
 
-      grupoSelect.innerHTML =
-        Object.keys(canaisPorGrupo)
-          .sort()
-          .map(g => `<option>${g}</option>`)
-          .join('');
+    gerarGrupos();
+    gerarGrid();
+}
 
-      grupoSelect.onchange = atualizarCanais;
-      buscaInput.oninput = atualizarCanais;
 
-      atualizarCanais();
+// ===============================
+// GERAR MENU DE GRUPOS
+// ===============================
+function gerarGrupos() {
+    const grupos = ["Todos", ...new Set(canais.map(c => c.grupo))];
+    const div = document.getElementById("groupList");
+
+    div.innerHTML = "";
+
+    grupos.forEach(g => {
+        const btn = document.createElement("div");
+        btn.className = "groupBtn";
+        btn.innerText = g;
+        btn.onclick = () => {
+            grupoAtual = g;
+            gerarGrid();
+        };
+        div.appendChild(btn);
+    });
+}
+
+// ===============================
+// GERAR GRID DE CANAIS
+// ===============================
+function gerarGrid() {
+    const grid = document.getElementById("canalGrid");
+    const busca = document.getElementById("searchBox").value.toLowerCase();
+
+    grid.innerHTML = "";
+
+    canais
+        .filter(c =>
+            (grupoAtual === "Todos" || c.grupo === grupoAtual) &&
+            c.nome.toLowerCase().includes(busca)
+        )
+        .forEach(c => {
+            const div = document.createElement("div");
+            div.className = "card";
+
+            div.innerHTML = `
+                <img class="logo" src="${c.logo || 'https://via.placeholder.com/150?text=Sem+Logo'}">
+                <h4>${c.nome}</h4>
+                <small>${c.grupo}</small><br>
+                <button onclick="playChannel(${c.idx})">▶ Assistir</button>
+            `;
+
+            grid.appendChild(div);
+        });
+}
+
+// ===============================
+// BUSCA
+// ===============================
+function filtrarCanais() {
+    gerarGrid();
+}
+
+
+// ===============================
+// PLAYER
+// ===============================
+function playChannel(idx) {
+    const canal = canais[idx];
+    if (!canal) return;
+
+    document.getElementById("playerBox").style.display = "block";
+
+    const video = document.getElementById("player");
+
+    if (Hls.isSupported()) {
+        const hls = new Hls();
+        hls.loadSource(canal.url);
+        hls.attachMedia(video);
+        hls.on(Hls.Events.MANIFEST_PARSED, () => video.play());
+    } else {
+        video.src = canal.url;
+        video.play();
     }
 
-    // Atualizar lista de canais
-    function atualizarCanais() {
-      const grupo = grupoSelect.value;
-      const busca = buscaInput.value.toLowerCase();
-      const canais = canaisPorGrupo[grupo] || [];
+    mostrarEPG(canal);
+}
 
-      canalSelect.innerHTML = canais
-        .filter(c => c.nome.toLowerCase().includes(busca))
-        .map(c => `<option value="${c.url}">${c.nome}</option>`)
-        .join('');
+
+// ===============================
+// NORMALIZA NOME PARA MATCH EPG
+// ===============================
+function normalizeName(name) {
+    return name
+        .toLowerCase()
+        .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+        .replace(/hd|fhd|sd|uhd|4k/g, '')
+        .replace(/[^a-z0-9]/g, '');
+}
+
+
+// ===============================
+// CARREGAR E PARSEAR EPG XMLTV
+// ===============================
+async function loadEPG() {
+    epgLoading = true;
+    try {
+        const resp = await fetch(EPG_URL);
+        const xmlText = await resp.text();
+        parseEPG(xmlText);
+        epgLoaded = true;
+    } catch (e) {
+        console.error(e);
+        document.getElementById("epgBox").innerHTML = "EPG indisponível.";
+    }
+    epgLoading = false;
+
+    if (pendingEPGChannel) renderEPGForChannel(pendingEPGChannel);
+}
+
+function parseEPG(xmlText) {
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(xmlText, "application/xml");
+
+    // canais
+    doc.querySelectorAll("channel").forEach(ch => {
+        const id = ch.getAttribute("id");
+        const name = ch.querySelector("display-name")?.textContent || id;
+
+        epgChannels[id] = { id, name };
+        epgNameIndex[normalizeName(name)] = id;
+    });
+
+    // programas
+    doc.querySelectorAll("programme").forEach(p => {
+        const chId = p.getAttribute("channel");
+        const start = parseXmltvDate(p.getAttribute("start"));
+        const stop = parseXmltvDate(p.getAttribute("stop"));
+
+        if (!start || !stop) return;
+
+        const title = p.querySelector("title")?.textContent || "Sem título";
+        const desc = p.querySelector("desc")?.textContent || "";
+
+        if (!epgProgrammesByChannel[chId])
+            epgProgrammesByChannel[chId] = [];
+
+        epgProgrammesByChannel[chId].push({
+            start, stop, title, desc
+        });
+    });
+
+    // ordena cronologicamente
+    for (const id in epgProgrammesByChannel) {
+        epgProgrammesByChannel[id].sort((a, b) => a.start - b.start);
+    }
+}
+
+function parseXmltvDate(str) {
+    const m = str.match(/^(\d{4})(\d{2})(\d{2})(\d{2})(\d{2})(\d{2})/);
+    if (!m) return null;
+
+    const year = +m[1], month = +m[2] - 1, day = +m[3];
+    const hour = +m[4], min = +m[5], sec = +m[6];
+
+    let date = new Date(Date.UTC(year, month, day, hour, min, sec));
+
+    // offset timezone
+    const offset = str.match(/ ([+\-]\d{4})$/);
+    if (offset) {
+        const sign = offset[1][0] === "-" ? -1 : 1;
+        const oh = +offset[1].slice(1, 3);
+        const om = +offset[1].slice(3, 5);
+        date = new Date(date.getTime() - sign * (oh * 60 + om) * 60000);
     }
 
-    // Reproduzir canal
-    function tocarCanal() {
-      const url = canalSelect.value;
-      const nome = canalSelect.options[canalSelect.selectedIndex].text;
+    return date;
+}
 
-      canalInfo.textContent = `Reproduzindo: ${nome}`;
 
-      if (hlsInstance) {
-        hlsInstance.destroy();
-        hlsInstance = null;
-      }
+// ===============================
+// EXIBIR EPG
+// ===============================
+function mostrarEPG(canal) {
+    const box = document.getElementById("epgBox");
+    box.style.display = "block";
+    box.innerHTML = "Carregando EPG...";
 
-      if (Hls.isSupported()) {
-        hlsInstance = new Hls();
-        hlsInstance.loadSource(url);
-        hlsInstance.attachMedia(player);
-        hlsInstance.on(Hls.Events.MANIFEST_PARSED, () => player.play());
-      } else if (player.canPlayType('application/vnd.apple.mpegurl')) {
-        player.src = url;
-        player.play();
-      } else {
-        alert('Este navegador não suporta HLS.');
-      }
+    pendingEPGChannel = canal;
+
+    if (!epgLoaded && !epgLoading) loadEPG();
+    else if (epgLoaded) renderEPGForChannel(canal);
+}
+
+function renderEPGForChannel(canal) {
+    const box = document.getElementById("epgBox");
+
+    let chId = canal.tvgId;
+
+    // fallback por nome
+    if (!chId || !epgProgrammesByChannel[chId]) {
+        const norm = normalizeName(canal.nome);
+        chId = epgNameIndex[norm];
     }
 
-    // Tela cheia
-    function telaCheia() {
-      if (player.requestFullscreen) player.requestFullscreen();
-      else if (player.webkitRequestFullscreen) player.webkitRequestFullscreen();
+    if (!chId || !epgProgrammesByChannel[chId]) {
+        box.innerHTML = "<h3>Guia de Programação</h3><p>Sem EPG disponível.</p>";
+        return;
     }
 
-    carregarLista();
-  </script>
+    const lista = epgProgrammesByChannel[chId];
+    const now = new Date();
+
+    let atual = null;
+    let futuros = [];
+
+    lista.forEach(p => {
+        if (p.start <= now && p.stop > now) atual = p;
+        else if (p.start > now) futuros.push(p);
+    });
+
+    futuros.sort((a, b) => a.start - b.start);
+
+    const prox = futuros[0];
+    const depois = futuros[1];
+
+    let html = `<h3>Guia de Programação</h3><h4>${epgChannels[chId]?.name || canal.nome}</h4>`;
+
+    // Agora
+    if (atual) {
+        const perc = ((now - atual.start) / (atual.stop - atual.start)) * 100;
+
+        html += `
+        <div class="epg-section">
+            <div class="epg-title">Agora: ${atual.title}</div>
+            <div class="epg-time">${format(atual.start)} - ${format(atual.stop)}</div>
+            <div class="epg-progress-bar">
+                <div class="epg-progress-fill" style="width:${perc}%"></div>
+            </div>
+            <div class="epg-desc">${atual.desc}</div>
+        </div>`;
+    }
+
+    // Próximo
+    if (prox) {
+        html += `
+        <div class="epg-section">
+            <div class="epg-title">Próximo: ${prox.title}</div>
+            <div class="epg-time">${format(prox.start)} - ${format(prox.stop)}</div>
+            <div class="epg-desc">${prox.desc}</div>
+        </div>`;
+    }
+
+    // Depois
+    if (depois) {
+        html += `
+        <div class="epg-section">
+            <div class="epg-title">Depois: ${depois.title}</div>
+            <div class="epg-time">${format(depois.start)} - ${format(depois.stop)}</div>
+            <div class="epg-desc">${depois.desc}</div>
+        </div>`;
+    }
+
+    box.innerHTML = html;
+}
+
+function format(date) {
+    return String(date.getHours()).padStart(2, "0") + ":" +
+           String(date.getMinutes()).padStart(2, "0");
+}
+
+
+// ===============================
+// TEMA AUTOMÁTICO (ESCURO PADRÃO)
+// ===============================
+(function aplicarTema() {
+    document.body.classList.remove("light");
+    document.body.classList.add("dark");
+
+    const h = new Date().getHours();
+
+    // CLARO apenas entre 6h e 18h
+    if (h >= 6 && h < 18) {
+        document.body.classList.remove("dark");
+        document.body.classList.add("light");
+    }
+})();
+</script>
 
 </body>
 </html>
