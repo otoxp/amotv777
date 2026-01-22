@@ -6,127 +6,89 @@
 <title>AMOTV777</title>
 
 <link rel="stylesheet" href="style.css">
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
 </head>
 
 <body>
 
-<div class="topbar">
-  <div class="brand">
-    <strong>AMOTV777</strong>
-    <span>IPTV & EPG</span>
-  </div>
-</div>
+<header>
+  <strong>AMOTV777</strong>
+  <span>IPTV simples com EPG</span>
+</header>
 
-<div class="app">
+<main>
 
-  <aside class="sidebar">
-    <input id="search" placeholder="Buscar canal…">
-    <div id="groups" class="groups"></div>
-  </aside>
+  <video id="video" controls playsinline></video>
 
-  <main class="player-wrap">
-    <video id="video" controls playsinline></video>
+  <section id="epg">
+    <div id="epgTitle">Selecione um canal</div>
+    <div id="epgTime"></div>
+    <div class="bar"><div class="fill"></div></div>
+  </section>
 
-    <div id="epg" class="epg-box">
-      <div class="epg-title">Nenhum programa</div>
-      <div class="epg-time"></div>
-      <div class="epg-bar"><div class="epg-fill"></div></div>
-    </div>
+  <input id="search" placeholder="Buscar canal">
 
-    <div id="channels" class="channel-list"></div>
-  </main>
+  <div id="channels"></div>
 
-</div>
+</main>
 
 <script>
 const M3U_URL = "https://tinyurl.com/w777tv";
 const EPG_URL = "https://raw.githubusercontent.com/otoxp/wepg/refs/heads/main/guide3.xml";
 
-let canais = [];
-let grupos = {};
-let epgMap = {};
-let hls = null;
+let canais=[], epg={}, hls=null;
 
-/* ================= M3U ================= */
-fetch(M3U_URL).then(r=>r.text()).then(parseM3U);
-
-function parseM3U(text){
-  let lines = text.split("\n");
-  let ch = {};
-  lines.forEach(l=>{
+/* ===== M3U ===== */
+fetch(M3U_URL).then(r=>r.text()).then(txt=>{
+  let ch={};
+  txt.split("\n").forEach(l=>{
     l=l.trim();
     if(l.startsWith("#EXTINF")){
-      ch = {
-        nome: l.split(",").pop().trim(),
-        grupo: (l.match(/group-title="(.*?)"/)||[])[1] || "Outros",
-        logo: (l.match(/tvg-logo="(.*?)"/)||[])[1] || "",
-        id: (l.match(/tvg-id="(.*?)"/)||[])[1] || l.split(",").pop().trim()
+      ch={
+        nome:l.split(",").pop().trim(),
+        id:(l.match(/tvg-id="(.*?)"/)||[])[1] || l.split(",").pop().trim(),
+        logo:(l.match(/tvg-logo="(.*?)"/)||[])[1] || ""
       };
     }
     if(l.startsWith("http")){
-      ch.url = l;
+      ch.url=l;
       canais.push(ch);
-      ch = {};
+      ch={};
     }
   });
-  buildGroups();
+  render();
   loadEPG();
-  renderChannels();
-}
+});
 
-/* ================= EPG ================= */
+/* ===== EPG ===== */
 function loadEPG(){
   fetch(EPG_URL).then(r=>r.text()).then(xml=>{
-    let dom = new DOMParser().parseFromString(xml,"text/xml");
+    let dom=new DOMParser().parseFromString(xml,"text/xml");
     dom.querySelectorAll("programme").forEach(p=>{
-      let id = p.getAttribute("channel");
-      if(!epgMap[id]) epgMap[id]=[];
-      epgMap[id].push({
-        start: xmlDate(p.getAttribute("start")),
-        stop: xmlDate(p.getAttribute("stop")),
-        title: p.querySelector("title")?.textContent || "Sem título"
+      let id=p.getAttribute("channel");
+      if(!epg[id]) epg[id]=[];
+      epg[id].push({
+        start:parseDate(p.getAttribute("start")),
+        stop:parseDate(p.getAttribute("stop")),
+        title:p.querySelector("title")?.textContent||""
       });
     });
   });
 }
 
-function xmlDate(s){
+function parseDate(s){
   return new Date(
-    s.substr(0,4),
-    s.substr(4,2)-1,
-    s.substr(6,2),
-    s.substr(8,2),
-    s.substr(10,2)
+    s.substr(0,4),s.substr(4,2)-1,s.substr(6,2),
+    s.substr(8,2),s.substr(10,2)
   );
 }
 
-/* ================= UI ================= */
-function buildGroups(){
-  grupos={};
-  canais.forEach(c=>{
-    if(!grupos[c.grupo]) grupos[c.grupo]=[];
-    grupos[c.grupo].push(c);
-  });
-
-  let gdiv=document.getElementById("groups");
-  gdiv.innerHTML="";
-  Object.keys(grupos).forEach(g=>{
-    let d=document.createElement("div");
-    d.className="group";
-    d.textContent=g;
-    d.onclick=()=>renderChannels(g);
-    gdiv.appendChild(d);
-  });
-}
-
-function renderChannels(grupo){
-  let list = grupo?grupos[grupo]:canais;
-  let busca=document.getElementById("search").value.toLowerCase();
+/* ===== UI ===== */
+function render(){
+  let q=document.getElementById("search").value.toLowerCase();
   let cdiv=document.getElementById("channels");
   cdiv.innerHTML="";
-  list.filter(c=>c.nome.toLowerCase().includes(busca)).forEach(c=>{
+  canais.filter(c=>c.nome.toLowerCase().includes(q)).forEach(c=>{
     let d=document.createElement("div");
     d.className="channel";
     d.innerHTML=`<img src="${c.logo}"><span>${c.nome}</span>`;
@@ -134,13 +96,12 @@ function renderChannels(grupo){
     cdiv.appendChild(d);
   });
 }
+document.getElementById("search").onkeyup=render;
 
-document.getElementById("search").onkeyup=()=>renderChannels();
-
-/* ================= PLAYER + EPG ================= */
+/* ===== PLAYER + EPG ===== */
 function play(c){
   let v=document.getElementById("video");
-  if(hls){hls.destroy();}
+  if(hls) hls.destroy();
   if(Hls.isSupported()){
     hls=new Hls();
     hls.loadSource(c.url);
@@ -154,26 +115,24 @@ function play(c){
 }
 
 function showEPG(c){
-  let box=document.getElementById("epg");
-  let title=box.querySelector(".epg-title");
-  let time=box.querySelector(".epg-time");
-  let fill=box.querySelector(".epg-fill");
-
   let now=new Date();
-  let progs = epgMap[c.id] || epgMap[c.nome] || [];
-  let p = progs.find(p=>now>=p.start && now<=p.stop);
+  let p=(epg[c.id]||epg[c.nome]||[]).find(p=>now>=p.start&&now<=p.stop);
+
+  let t=document.getElementById("epgTitle");
+  let tm=document.getElementById("epgTime");
+  let f=document.querySelector(".fill");
 
   if(!p){
-    title.textContent="Sem EPG disponível";
-    time.textContent="";
-    fill.style.width="0%";
+    t.textContent="Sem EPG disponível";
+    tm.textContent="";
+    f.style.width="0%";
     return;
   }
 
   let perc=((now-p.start)/(p.stop-p.start))*100;
-  title.textContent=p.title;
-  time.textContent=p.start.toLocaleTimeString().slice(0,5)+" - "+p.stop.toLocaleTimeString().slice(0,5);
-  fill.style.width=perc+"%";
+  t.textContent=p.title;
+  tm.textContent=p.start.toLocaleTimeString().slice(0,5)+" - "+p.stop.toLocaleTimeString().slice(0,5);
+  f.style.width=perc+"%";
 }
 </script>
 </body>
