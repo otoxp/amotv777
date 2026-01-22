@@ -2,203 +2,168 @@
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>AMOTV777 – IPTV & EPG</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AMOTV777</title>
 
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
 
 <style>
-:root {
-    --bg-dark:#0f1117;
-    --sidebar-dark:#111827;
+:root{
+    --bg:#0f1117;
+    --card:#1f2937;
     --accent:#2563eb;
-    --card-bg:#1f2937;
+    --text:#e5e7eb;
+    --muted:#94a3b8;
 }
+
 *{box-sizing:border-box}
 body{
     margin:0;
-    font-family:'Inter',sans-serif;
-    background:var(--bg-dark);
-    color:#e5e5e5;
-    display:flex;
-    height:100vh;
-    overflow:hidden;
+    font-family:Inter,sans-serif;
+    background:var(--bg);
+    color:var(--text);
 }
-#sidebar{
-    width:260px;
-    background:var(--sidebar-dark);
-    padding:20px;
-    overflow-y:auto;
-    border-right:1px solid #374151;
+
+/* PLAYER */
+#playerBox{
+    position:sticky;
+    top:0;
+    z-index:10;
+    background:#000;
 }
-#groupList{display:flex;flex-direction:column;gap:5px}
-.groupBtn{
-    background:rgba(255,255,255,.05);
-    padding:10px;
-    border-radius:6px;
-    cursor:pointer;
-    font-size:13px;
+video{
+    width:100%;
+    aspect-ratio:16/9;
 }
-.groupBtn.active{background:var(--accent);color:#fff}
 
-#main{flex:1;padding:15px;overflow-y:auto}
-
-#playerBox{display:none;background:#000;border-radius:12px;margin-bottom:10px}
-video{width:100%;aspect-ratio:16/9}
-
+/* EPG */
 #epgBox{
     display:none;
-    background:var(--card-bg);
-    padding:15px;
-    border-radius:10px;
-    margin-bottom:15px;
+    padding:10px;
+    background:var(--card);
     border-left:4px solid var(--accent);
 }
-.epg-now{font-weight:600}
-.epg-time{font-size:12px;color:#94a3b8}
-.epg-progress{height:6px;background:#374151;border-radius:3px;margin-top:8px}
+.epg-now{font-weight:600;font-size:14px}
+.epg-time{font-size:12px;color:var(--muted)}
+.epg-progress{height:6px;background:#374151;border-radius:3px;margin-top:6px}
 .epg-fill{height:100%;background:var(--accent)}
 
+/* GRUPOS */
+#groupList{
+    display:flex;
+    gap:8px;
+    padding:10px;
+    overflow-x:auto;
+    background:#111827;
+}
+.groupBtn{
+    flex:0 0 auto;
+    padding:8px 14px;
+    border-radius:20px;
+    background:#1f2937;
+    font-size:13px;
+    white-space:nowrap;
+}
+.groupBtn.active{
+    background:var(--accent);
+}
+
+/* BUSCA */
 #searchBox{
     width:100%;
-    padding:12px;
-    border-radius:8px;
-    border:1px solid #4b5563;
+    padding:14px;
+    border:none;
     background:#111827;
     color:#fff;
-    margin-bottom:15px;
+    font-size:16px;
 }
 
+/* GRID */
 .grid{
     display:grid;
-    grid-template-columns:repeat(auto-fill,minmax(140px,1fr));
-    gap:12px;
+    grid-template-columns:repeat(2,1fr);
+    gap:10px;
+    padding:10px;
 }
 .card{
-    background:var(--card-bg);
-    padding:12px;
+    background:var(--card);
+    padding:10px;
     border-radius:12px;
     text-align:center;
-    border:1px solid #374151;
 }
-.logo{height:50px;object-fit:contain;margin-bottom:6px}
-.card h4{font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-
+.logo{
+    height:45px;
+    object-fit:contain;
+}
+.card h4{
+    font-size:13px;
+    margin:6px 0;
+    white-space:nowrap;
+    overflow:hidden;
+    text-overflow:ellipsis;
+}
 button{
-    background:var(--accent);
-    color:#fff;
+    width:100%;
     padding:10px;
     border:none;
     border-radius:8px;
-    cursor:pointer;
-    width:100%;
+    background:var(--accent);
+    color:#fff;
     font-weight:600;
+}
+
+/* TABLET */
+@media(min-width:600px){
+    .grid{grid-template-columns:repeat(3,1fr)}
+}
+
+/* DESKTOP */
+@media(min-width:1024px){
+    .grid{grid-template-columns:repeat(6,1fr)}
 }
 </style>
 </head>
 
 <body>
 
-<div id="sidebar">
-    <h2 style="text-align:center;color:var(--accent)">AMOTV777</h2>
-    <div id="groupList">Carregue uma lista...</div>
+<div id="playerBox">
+    <video id="player" controls playsinline></video>
 </div>
 
-<div id="main">
-    <div id="setupBox">
-        <input id="urlInput" placeholder="URL da lista M3U" style="width:100%;padding:12px;margin-bottom:10px">
-        <button onclick="loadFromURL()">Carregar</button>
-        <input type="file" accept=".m3u,.m3u8" onchange="loadFromFile(event)" style="margin-top:10px">
-    </div>
+<div id="epgBox"></div>
 
-    <div id="playerBox">
-        <video id="player" controls playsinline></video>
-    </div>
+<div id="groupList"></div>
 
-    <div id="epgBox"></div>
+<input id="searchBox" placeholder="🔍 Buscar canal" onkeyup="gerarGrid()">
 
-    <input id="searchBox" placeholder="🔍 Buscar canal..." onkeyup="gerarGrid()">
-
-    <div class="grid" id="canalGrid"></div>
-</div>
+<div class="grid" id="canalGrid"></div>
 
 <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
 
 <script>
-const EPG_URL = "https://raw.githubusercontent.com/otoxp/wepg/refs/heads/main/guide3.xml";
+const EPG_URL="https://raw.githubusercontent.com/otoxp/wepg/refs/heads/main/guide3.xml";
 
-let canais=[], grupoAtual="Todos", hls=null;
-let epgData={};
+let canais=[],grupoAtual="Todos",epg={},hls;
 
-function normalizarId(txt){
-    return (txt||"")
-        .toLowerCase()
-        .replace(/hd|fhd|uhd/g,'')
-        .replace(/[^a-z0-9]/g,'')
-        .trim();
+function norm(t){
+    return (t||"").toLowerCase().replace(/hd|fhd|uhd/g,"").replace(/[^a-z0-9]/g,"");
 }
 
-async function loadFromURL(){
-    const url=document.getElementById("urlInput").value.trim();
-    if(!url)return;
-    const r=await fetch(url);
-    parseM3U(await r.text());
-}
-
-function loadFromFile(e){
-    const reader=new FileReader();
-    reader.onload=ev=>parseM3U(ev.target.result);
-    reader.readAsText(e.target.files[0]);
-}
-
-async function parseM3U(text){
-    canais=[];
-    const lines=text.split("\n");
-    let canal={};
-
-    lines.forEach(l=>{
-        l=l.trim();
-        if(l.startsWith("#EXTINF")){
-            const group=l.match(/group-title="(.*?)"/);
-            const logo=l.match(/tvg-logo="(.*?)"/);
-            const id=l.match(/tvg-id="(.*?)"/);
-            const name=l.split(",")[1]||"Canal";
-            canal={
-                nome:name,
-                grupo:group?.[1]||"Outros",
-                logo:logo?.[1]||"",
-                tvgId:id?.[1]||name
-            };
-        }else if(l.startsWith("http")){
-            canal.url=l;
-            canal.idx=canais.length;
-            canais.push(canal);
-            canal={};
-        }
-    });
-
-    document.getElementById("setupBox").style.display="none";
-    await loadEPG();
-    gerarGrupos();
-    gerarGrid();
-}
-
-async function loadEPG(){
+async function init(){
     const r=await fetch(EPG_URL);
     const xml=new DOMParser().parseFromString(await r.text(),"text/xml");
-
     xml.querySelectorAll("programme").forEach(p=>{
-        const key=normalizarId(p.getAttribute("channel"));
-        if(!epgData[key]) epgData[key]=[];
-        epgData[key].push({
-            start:parseXmlDate(p.getAttribute("start")),
-            stop:parseXmlDate(p.getAttribute("stop")),
-            title:p.querySelector("title")?.textContent||"Sem título"
+        const id=norm(p.getAttribute("channel"));
+        if(!epg[id])epg[id]=[];
+        epg[id].push({
+            s:parse(p.getAttribute("start")),
+            e:parse(p.getAttribute("stop")),
+            t:p.querySelector("title")?.textContent
         });
     });
 }
 
-function parseXmlDate(s){
+function parse(s){
     return new Date(Date.UTC(
         s.substr(0,4),
         s.substr(4,2)-1,
@@ -208,75 +173,68 @@ function parseXmlDate(s){
     ));
 }
 
-function renderEPG(canal){
-    const key=normalizarId(canal.tvgId||canal.nome);
-    const progs=epgData[key]||[];
-    const now=new Date();
-    const atual=progs.find(p=>now>=p.start&&now<=p.stop);
-
-    const box=document.getElementById("epgBox");
-    if(!atual){box.style.display="none";return;}
-
-    const perc=((now-atual.start)/(atual.stop-atual.start))*100;
-    box.style.display="block";
-    box.innerHTML=`
-        <div class="epg-now">📺 No ar: ${atual.title}</div>
-        <div class="epg-time">${format(atual.start)} - ${format(atual.stop)}</div>
-        <div class="epg-progress"><div class="epg-fill" style="width:${perc}%"></div></div>
+function renderEPG(c){
+    const id=norm(c.tvgId||c.nome);
+    const p=epg[id]||[];
+    const n=new Date();
+    const a=p.find(x=>n>=x.s&&n<=x.e);
+    if(!a)return epgBox.style.display="none";
+    const pr=((n-a.s)/(a.e-a.s))*100;
+    epgBox.style.display="block";
+    epgBox.innerHTML=`
+        <div class="epg-now">📺 ${a.t}</div>
+        <div class="epg-time">${fmt(a.s)} - ${fmt(a.e)}</div>
+        <div class="epg-progress"><div class="epg-fill" style="width:${pr}%"></div></div>
     `;
 }
 
-function format(d){
-    return d.getHours().toString().padStart(2,'0')+":"+d.getMinutes().toString().padStart(2,'0');
+function fmt(d){
+    return d.getHours().toString().padStart(2,"0")+":"+d.getMinutes().toString().padStart(2,"0");
 }
 
 function gerarGrupos(){
-    const grupos=["Todos",...new Set(canais.map(c=>c.grupo))];
-    const div=document.getElementById("groupList");
-    div.innerHTML="";
-    grupos.forEach(g=>{
+    const gs=["Todos",...new Set(canais.map(c=>c.grupo))];
+    groupList.innerHTML="";
+    gs.forEach(g=>{
         const b=document.createElement("div");
         b.className="groupBtn"+(g===grupoAtual?" active":"");
         b.innerText=g;
         b.onclick=()=>{grupoAtual=g;gerarGrupos();gerarGrid()};
-        div.appendChild(b);
+        groupList.appendChild(b);
     });
 }
 
 function gerarGrid(){
-    const grid=document.getElementById("canalGrid");
-    const busca=document.getElementById("searchBox").value.toLowerCase();
-    grid.innerHTML="";
-    canais
-    .filter(c=>(grupoAtual==="Todos"||c.grupo===grupoAtual)&&c.nome.toLowerCase().includes(busca))
+    const b=searchBox.value.toLowerCase();
+    canalGrid.innerHTML="";
+    canais.filter(c=>(grupoAtual==="Todos"||c.grupo===grupoAtual)&&c.nome.toLowerCase().includes(b))
     .forEach(c=>{
-        grid.innerHTML+=`
-            <div class="card">
-                <img class="logo" src="${c.logo||'https://via.placeholder.com/100'}">
-                <h4>${c.nome}</h4>
-                <button onclick="playChannel(${c.idx})">ASSISTIR</button>
-            </div>`;
+        canalGrid.innerHTML+=`
+        <div class="card">
+            <img class="logo" src="${c.logo||'https://via.placeholder.com/80'}">
+            <h4>${c.nome}</h4>
+            <button onclick="play(${c.idx})">Assistir</button>
+        </div>`;
     });
 }
 
-function playChannel(idx){
-    const c=canais[idx];
-    const v=document.getElementById("player");
-    document.getElementById("playerBox").style.display="block";
-
+function play(i){
+    const c=canais[i];
     if(hls)hls.destroy();
     if(Hls.isSupported()){
         hls=new Hls();
         hls.loadSource(c.url);
-        hls.attachMedia(v);
-        hls.on(Hls.Events.MANIFEST_PARSED,()=>v.play());
+        hls.attachMedia(player);
+        hls.on(Hls.Events.MANIFEST_PARSED,()=>player.play());
     }else{
-        v.src=c.url;
-        v.play();
+        player.src=c.url;
+        player.play();
     }
     renderEPG(c);
-    window.scrollTo({top:0,behavior:"smooth"});
 }
+
+init();
 </script>
+
 </body>
 </html>
