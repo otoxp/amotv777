@@ -1,88 +1,133 @@
-body{
-  margin:0;
-  background:#1e2228;
-  color:#f1f1f1;
-  font-family:Arial, sans-serif;
+/* ===== RESET / BASE ===== */
+* {
+  box-sizing: border-box;
 }
 
-header{
-  padding:12px;
-  background:#2a2f36;
+body {
+  margin: 0;
+  background: #20242a;
+  color: #f2f2f2;
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, Arial;
 }
 
-header span{
-  display:block;
-  font-size:12px;
-  opacity:.7;
+/* ===== TOPO ===== */
+header {
+  padding: 14px 16px;
+  background: #2c3138;
 }
 
-main{
-  padding:10px;
+header strong {
+  font-size: 18px;
 }
 
-video{
-  width:100%;
-  height:32vh;
-  background:black;
-  border-radius:6px;
+header span {
+  display: block;
+  font-size: 12px;
+  opacity: 0.7;
 }
 
-#epg{
-  margin-top:8px;
-  padding:8px;
-  background:#2a2f36;
-  border-radius:6px;
+/* ===== CONTEÚDO ===== */
+main {
+  padding: 10px;
 }
 
-#epgTitle{
-  font-weight:bold;
+/* ===== PLAYER ===== */
+video {
+  width: 100%;
+  height: 34vh;
+  background: black;
+  border-radius: 8px;
 }
 
-#epgTime{
-  font-size:13px;
-  opacity:.8;
+/* ===== EPG ===== */
+#epg {
+  margin-top: 10px;
+  padding: 10px;
+  background: #2c3138;
+  border-radius: 8px;
 }
 
-.bar{
-  height:5px;
-  background:#444;
-  margin-top:6px;
-  border-radius:3px;
-  overflow:hidden;
+#epgTitle {
+  font-size: 15px;
+  font-weight: 600;
 }
 
-.fill{
-  height:100%;
-  width:0%;
-  background:#1e90ff;
+#epgTime {
+  font-size: 13px;
+  opacity: 0.75;
+  margin-top: 2px;
 }
 
-input{
-  width:100%;
-  padding:8px;
-  margin:10px 0;
-  border-radius:6px;
-  border:none;
+.bar {
+  height: 6px;
+  background: #444;
+  margin-top: 8px;
+  border-radius: 4px;
+  overflow: hidden;
 }
 
-#channels{
-  display:flex;
-  flex-direction:column;
-  gap:6px;
+.fill {
+  height: 100%;
+  width: 0%;
+  background: #1e90ff;
 }
 
-.channel{
-  display:flex;
-  align-items:center;
-  gap:10px;
-  padding:8px;
-  background:#2a2f36;
-  border-radius:6px;
-  cursor:pointer;
+/* ===== BUSCA ===== */
+input {
+  width: 100%;
+  padding: 12px;
+  margin: 12px 0;
+  border-radius: 8px;
+  border: none;
+  font-size: 16px;
+  background: #2c3138;
+  color: #fff;
 }
 
-.channel img{
-  width:48px;
-  height:30px;
-  object-fit:contain;
+/* ===== LISTA DE CANAIS ===== */
+#channels {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+/* Canal = botão grande (dedo) */
+.channel {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px;
+  background: #2c3138;
+  border-radius: 10px;
+  cursor: pointer;
+}
+
+.channel img {
+  width: 56px;
+  height: 34px;
+  object-fit: contain;
+  border-radius: 6px;
+}
+
+.channel span {
+  font-size: 15px;
+}
+
+/* ===== TABLET ===== */
+@media (min-width: 700px) {
+  video {
+    height: 38vh;
+  }
+
+  #channels {
+    gap: 10px;
+  }
+
+  .channel {
+    padding: 14px;
+  }
+
+  .channel span {
+    font-size: 16px;
+  }
 }
