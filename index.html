@@ -5,236 +5,176 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>AMOTV777</title>
 
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
-
-<style>
-:root{
-    --bg:#0f1117;
-    --card:#1f2937;
-    --accent:#2563eb;
-    --text:#e5e7eb;
-    --muted:#94a3b8;
-}
-
-*{box-sizing:border-box}
-body{
-    margin:0;
-    font-family:Inter,sans-serif;
-    background:var(--bg);
-    color:var(--text);
-}
-
-/* PLAYER */
-#playerBox{
-    position:sticky;
-    top:0;
-    z-index:10;
-    background:#000;
-}
-video{
-    width:100%;
-    aspect-ratio:16/9;
-}
-
-/* EPG */
-#epgBox{
-    display:none;
-    padding:10px;
-    background:var(--card);
-    border-left:4px solid var(--accent);
-}
-.epg-now{font-weight:600;font-size:14px}
-.epg-time{font-size:12px;color:var(--muted)}
-.epg-progress{height:6px;background:#374151;border-radius:3px;margin-top:6px}
-.epg-fill{height:100%;background:var(--accent)}
-
-/* GRUPOS */
-#groupList{
-    display:flex;
-    gap:8px;
-    padding:10px;
-    overflow-x:auto;
-    background:#111827;
-}
-.groupBtn{
-    flex:0 0 auto;
-    padding:8px 14px;
-    border-radius:20px;
-    background:#1f2937;
-    font-size:13px;
-    white-space:nowrap;
-}
-.groupBtn.active{
-    background:var(--accent);
-}
-
-/* BUSCA */
-#searchBox{
-    width:100%;
-    padding:14px;
-    border:none;
-    background:#111827;
-    color:#fff;
-    font-size:16px;
-}
-
-/* GRID */
-.grid{
-    display:grid;
-    grid-template-columns:repeat(2,1fr);
-    gap:10px;
-    padding:10px;
-}
-.card{
-    background:var(--card);
-    padding:10px;
-    border-radius:12px;
-    text-align:center;
-}
-.logo{
-    height:45px;
-    object-fit:contain;
-}
-.card h4{
-    font-size:13px;
-    margin:6px 0;
-    white-space:nowrap;
-    overflow:hidden;
-    text-overflow:ellipsis;
-}
-button{
-    width:100%;
-    padding:10px;
-    border:none;
-    border-radius:8px;
-    background:var(--accent);
-    color:#fff;
-    font-weight:600;
-}
-
-/* TABLET */
-@media(min-width:600px){
-    .grid{grid-template-columns:repeat(3,1fr)}
-}
-
-/* DESKTOP */
-@media(min-width:1024px){
-    .grid{grid-template-columns:repeat(6,1fr)}
-}
-</style>
+<link rel="stylesheet" href="style.css">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
 </head>
 
 <body>
 
-<div id="playerBox">
-    <video id="player" controls playsinline></video>
+<div class="topbar">
+  <div class="brand">
+    <strong>AMOTV777</strong>
+    <span>IPTV & EPG</span>
+  </div>
 </div>
 
-<div id="epgBox"></div>
+<div class="app">
 
-<div id="groupList"></div>
+  <aside class="sidebar">
+    <input id="search" placeholder="Buscar canal…">
+    <div id="groups" class="groups"></div>
+  </aside>
 
-<input id="searchBox" placeholder="🔍 Buscar canal" onkeyup="gerarGrid()">
+  <main class="player-wrap">
+    <video id="video" controls playsinline></video>
 
-<div class="grid" id="canalGrid"></div>
+    <div id="epg" class="epg-box">
+      <div class="epg-title">Nenhum programa</div>
+      <div class="epg-time"></div>
+      <div class="epg-bar"><div class="epg-fill"></div></div>
+    </div>
 
-<script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
+    <div id="channels" class="channel-list"></div>
+  </main>
+
+</div>
 
 <script>
-const EPG_URL="https://raw.githubusercontent.com/otoxp/wepg/refs/heads/main/guide3.xml";
+const M3U_URL = "https://tinyurl.com/w777tv";
+const EPG_URL = "https://raw.githubusercontent.com/otoxp/wepg/refs/heads/main/guide3.xml";
 
-let canais=[],grupoAtual="Todos",epg={},hls;
+let canais = [];
+let grupos = {};
+let epgMap = {};
+let hls = null;
 
-function norm(t){
-    return (t||"").toLowerCase().replace(/hd|fhd|uhd/g,"").replace(/[^a-z0-9]/g,"");
-}
+/* ================= M3U ================= */
+fetch(M3U_URL).then(r=>r.text()).then(parseM3U);
 
-async function init(){
-    const r=await fetch(EPG_URL);
-    const xml=new DOMParser().parseFromString(await r.text(),"text/xml");
-    xml.querySelectorAll("programme").forEach(p=>{
-        const id=norm(p.getAttribute("channel"));
-        if(!epg[id])epg[id]=[];
-        epg[id].push({
-            s:parse(p.getAttribute("start")),
-            e:parse(p.getAttribute("stop")),
-            t:p.querySelector("title")?.textContent
-        });
-    });
-}
-
-function parse(s){
-    return new Date(Date.UTC(
-        s.substr(0,4),
-        s.substr(4,2)-1,
-        s.substr(6,2),
-        s.substr(8,2),
-        s.substr(10,2)
-    ));
-}
-
-function renderEPG(c){
-    const id=norm(c.tvgId||c.nome);
-    const p=epg[id]||[];
-    const n=new Date();
-    const a=p.find(x=>n>=x.s&&n<=x.e);
-    if(!a)return epgBox.style.display="none";
-    const pr=((n-a.s)/(a.e-a.s))*100;
-    epgBox.style.display="block";
-    epgBox.innerHTML=`
-        <div class="epg-now">📺 ${a.t}</div>
-        <div class="epg-time">${fmt(a.s)} - ${fmt(a.e)}</div>
-        <div class="epg-progress"><div class="epg-fill" style="width:${pr}%"></div></div>
-    `;
-}
-
-function fmt(d){
-    return d.getHours().toString().padStart(2,"0")+":"+d.getMinutes().toString().padStart(2,"0");
-}
-
-function gerarGrupos(){
-    const gs=["Todos",...new Set(canais.map(c=>c.grupo))];
-    groupList.innerHTML="";
-    gs.forEach(g=>{
-        const b=document.createElement("div");
-        b.className="groupBtn"+(g===grupoAtual?" active":"");
-        b.innerText=g;
-        b.onclick=()=>{grupoAtual=g;gerarGrupos();gerarGrid()};
-        groupList.appendChild(b);
-    });
-}
-
-function gerarGrid(){
-    const b=searchBox.value.toLowerCase();
-    canalGrid.innerHTML="";
-    canais.filter(c=>(grupoAtual==="Todos"||c.grupo===grupoAtual)&&c.nome.toLowerCase().includes(b))
-    .forEach(c=>{
-        canalGrid.innerHTML+=`
-        <div class="card">
-            <img class="logo" src="${c.logo||'https://via.placeholder.com/80'}">
-            <h4>${c.nome}</h4>
-            <button onclick="play(${c.idx})">Assistir</button>
-        </div>`;
-    });
-}
-
-function play(i){
-    const c=canais[i];
-    if(hls)hls.destroy();
-    if(Hls.isSupported()){
-        hls=new Hls();
-        hls.loadSource(c.url);
-        hls.attachMedia(player);
-        hls.on(Hls.Events.MANIFEST_PARSED,()=>player.play());
-    }else{
-        player.src=c.url;
-        player.play();
+function parseM3U(text){
+  let lines = text.split("\n");
+  let ch = {};
+  lines.forEach(l=>{
+    l=l.trim();
+    if(l.startsWith("#EXTINF")){
+      ch = {
+        nome: l.split(",").pop().trim(),
+        grupo: (l.match(/group-title="(.*?)"/)||[])[1] || "Outros",
+        logo: (l.match(/tvg-logo="(.*?)"/)||[])[1] || "",
+        id: (l.match(/tvg-id="(.*?)"/)||[])[1] || l.split(",").pop().trim()
+      };
     }
-    renderEPG(c);
+    if(l.startsWith("http")){
+      ch.url = l;
+      canais.push(ch);
+      ch = {};
+    }
+  });
+  buildGroups();
+  loadEPG();
+  renderChannels();
 }
 
-init();
-</script>
+/* ================= EPG ================= */
+function loadEPG(){
+  fetch(EPG_URL).then(r=>r.text()).then(xml=>{
+    let dom = new DOMParser().parseFromString(xml,"text/xml");
+    dom.querySelectorAll("programme").forEach(p=>{
+      let id = p.getAttribute("channel");
+      if(!epgMap[id]) epgMap[id]=[];
+      epgMap[id].push({
+        start: xmlDate(p.getAttribute("start")),
+        stop: xmlDate(p.getAttribute("stop")),
+        title: p.querySelector("title")?.textContent || "Sem título"
+      });
+    });
+  });
+}
 
+function xmlDate(s){
+  return new Date(
+    s.substr(0,4),
+    s.substr(4,2)-1,
+    s.substr(6,2),
+    s.substr(8,2),
+    s.substr(10,2)
+  );
+}
+
+/* ================= UI ================= */
+function buildGroups(){
+  grupos={};
+  canais.forEach(c=>{
+    if(!grupos[c.grupo]) grupos[c.grupo]=[];
+    grupos[c.grupo].push(c);
+  });
+
+  let gdiv=document.getElementById("groups");
+  gdiv.innerHTML="";
+  Object.keys(grupos).forEach(g=>{
+    let d=document.createElement("div");
+    d.className="group";
+    d.textContent=g;
+    d.onclick=()=>renderChannels(g);
+    gdiv.appendChild(d);
+  });
+}
+
+function renderChannels(grupo){
+  let list = grupo?grupos[grupo]:canais;
+  let busca=document.getElementById("search").value.toLowerCase();
+  let cdiv=document.getElementById("channels");
+  cdiv.innerHTML="";
+  list.filter(c=>c.nome.toLowerCase().includes(busca)).forEach(c=>{
+    let d=document.createElement("div");
+    d.className="channel";
+    d.innerHTML=`<img src="${c.logo}"><span>${c.nome}</span>`;
+    d.onclick=()=>play(c);
+    cdiv.appendChild(d);
+  });
+}
+
+document.getElementById("search").onkeyup=()=>renderChannels();
+
+/* ================= PLAYER + EPG ================= */
+function play(c){
+  let v=document.getElementById("video");
+  if(hls){hls.destroy();}
+  if(Hls.isSupported()){
+    hls=new Hls();
+    hls.loadSource(c.url);
+    hls.attachMedia(v);
+    hls.on(Hls.Events.MANIFEST_PARSED,()=>v.play());
+  } else {
+    v.src=c.url;
+    v.play();
+  }
+  showEPG(c);
+}
+
+function showEPG(c){
+  let box=document.getElementById("epg");
+  let title=box.querySelector(".epg-title");
+  let time=box.querySelector(".epg-time");
+  let fill=box.querySelector(".epg-fill");
+
+  let now=new Date();
+  let progs = epgMap[c.id] || epgMap[c.nome] || [];
+  let p = progs.find(p=>now>=p.start && now<=p.stop);
+
+  if(!p){
+    title.textContent="Sem EPG disponível";
+    time.textContent="";
+    fill.style.width="0%";
+    return;
+  }
+
+  let perc=((now-p.start)/(p.stop-p.start))*100;
+  title.textContent=p.title;
+  time.textContent=p.start.toLocaleTimeString().slice(0,5)+" - "+p.stop.toLocaleTimeString().slice(0,5);
+  fill.style.width=perc+"%";
+}
+</script>
 </body>
 </html>
