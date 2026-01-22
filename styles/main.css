@@ -1,133 +1,92 @@
-/* ===== RESET / BASE ===== */
 * {
   box-sizing: border-box;
 }
 
 body {
   margin: 0;
-  background: #20242a;
-  color: #f2f2f2;
-  font-family: system-ui, -apple-system, "Segoe UI", Roboto, Arial;
+  background: #f2f2f2;
+  font-family: Arial, Helvetica, sans-serif;
+  color: #222;
 }
 
-/* ===== TOPO ===== */
-header {
-  padding: 14px 16px;
-  background: #2c3138;
+/* HEADER */
+.header {
+  background: #ffffff;
+  padding: 12px;
+  text-align: center;
+  border-bottom: 1px solid #ddd;
 }
 
-header strong {
+.header h1 {
   font-size: 18px;
+  margin: 0;
 }
 
-header span {
-  display: block;
-  font-size: 12px;
-  opacity: 0.7;
-}
-
-/* ===== CONTEÚDO ===== */
-main {
+/* CONTAINER */
+.container {
+  max-width: 900px;
+  margin: auto;
   padding: 10px;
 }
 
-/* ===== PLAYER ===== */
-video {
+/* PLAYER */
+.player-box video {
   width: 100%;
-  height: 34vh;
-  background: black;
-  border-radius: 8px;
-}
-
-/* ===== EPG ===== */
-#epg {
-  margin-top: 10px;
-  padding: 10px;
-  background: #2c3138;
-  border-radius: 8px;
-}
-
-#epgTitle {
-  font-size: 15px;
-  font-weight: 600;
-}
-
-#epgTime {
-  font-size: 13px;
-  opacity: 0.75;
-  margin-top: 2px;
-}
-
-.bar {
-  height: 6px;
-  background: #444;
-  margin-top: 8px;
-  border-radius: 4px;
-  overflow: hidden;
-}
-
-.fill {
-  height: 100%;
-  width: 0%;
-  background: #1e90ff;
-}
-
-/* ===== BUSCA ===== */
-input {
-  width: 100%;
-  padding: 12px;
-  margin: 12px 0;
-  border-radius: 8px;
-  border: none;
-  font-size: 16px;
-  background: #2c3138;
-  color: #fff;
-}
-
-/* ===== LISTA DE CANAIS ===== */
-#channels {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-/* Canal = botão grande (dedo) */
-.channel {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 12px;
-  background: #2c3138;
-  border-radius: 10px;
-  cursor: pointer;
-}
-
-.channel img {
-  width: 56px;
-  height: 34px;
-  object-fit: contain;
+  max-height: 240px;
+  background: #000;
   border-radius: 6px;
 }
 
-.channel span {
-  font-size: 15px;
+/* BUSCA */
+.search-box {
+  margin: 10px 0;
 }
 
-/* ===== TABLET ===== */
-@media (min-width: 700px) {
-  video {
-    height: 38vh;
-  }
+.search-box input {
+  width: 100%;
+  padding: 10px;
+  font-size: 16px;
+}
 
-  #channels {
-    gap: 10px;
-  }
+/* CANAIS */
+.channels-box ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
 
-  .channel {
-    padding: 14px;
-  }
+.channels-box li {
+  padding: 12px;
+  border-bottom: 1px solid #ddd;
+  background: #fff;
+  cursor: pointer;
+}
 
-  .channel span {
-    font-size: 16px;
+.channels-box li:hover {
+  background: #eee;
+}
+
+/* EPG */
+.epg-box {
+  margin-top: 15px;
+  background: #fff;
+  padding: 10px;
+  border-radius: 6px;
+}
+
+.epg-box h2 {
+  font-size: 16px;
+  margin-bottom: 8px;
+}
+
+#epgContent {
+  font-size: 14px;
+  color: #444;
+}
+
+/* TABLET */
+@media (min-width: 768px) {
+  .player-box video {
+    max-height: 360px;
   }
 }
