@@ -1,139 +1,46 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>AMOTV777</title>
+  <meta charset="UTF-8">
+  <title>AMOT777 IPTV</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-<link rel="stylesheet" href="style/main.css">
-<script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
+  <link rel="stylesheet" href="styles/main.css">
+  <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
 </head>
 
 <body>
 
-<header>
-  <strong>AMOTV777</strong>
-  <span>IPTV simples com EPG</span>
+<header class="header">
+  <h1>AMOT777 IPTV</h1>
 </header>
 
-<main>
+<main class="container">
 
-  <video id="video" controls playsinline></video>
-
-  <section id="epg">
-    <div id="epgTitle">Selecione um canal</div>
-    <div id="epgTime"></div>
-    <div class="bar"><div class="fill"></div></div>
+  <!-- PLAYER -->
+  <section class="player-box">
+    <video id="player" controls playsinline></video>
   </section>
 
-  <input id="search" placeholder="Buscar canal">
+  <!-- BUSCA -->
+  <section class="search-box">
+    <input type="text" placeholder="Buscar canal...">
+  </section>
 
-  <div id="channels"></div>
+  <!-- CANAIS -->
+  <section class="channels-box">
+    <ul id="channelList">
+      <!-- canais -->
+    </ul>
+  </section>
+
+  <!-- EPG -->
+  <section class="epg-box">
+    <h2>Programação</h2>
+    <div id="epgContent">Selecione um canal</div>
+  </section>
 
 </main>
 
-<script>
-const M3U_URL = "https://tinyurl.com/w777tv";
-const EPG_URL = "https://raw.githubusercontent.com/otoxp/wepg/refs/heads/main/guide3.xml";
-
-let canais=[], epg={}, hls=null;
-
-/* ===== M3U ===== */
-fetch(M3U_URL).then(r=>r.text()).then(txt=>{
-  let ch={};
-  txt.split("\n").forEach(l=>{
-    l=l.trim();
-    if(l.startsWith("#EXTINF")){
-      ch={
-        nome:l.split(",").pop().trim(),
-        id:(l.match(/tvg-id="(.*?)"/)||[])[1] || l.split(",").pop().trim(),
-        logo:(l.match(/tvg-logo="(.*?)"/)||[])[1] || ""
-      };
-    }
-    if(l.startsWith("http")){
-      ch.url=l;
-      canais.push(ch);
-      ch={};
-    }
-  });
-  render();
-  loadEPG();
-});
-
-/* ===== EPG ===== */
-function loadEPG(){
-  fetch(EPG_URL).then(r=>r.text()).then(xml=>{
-    let dom=new DOMParser().parseFromString(xml,"text/xml");
-    dom.querySelectorAll("programme").forEach(p=>{
-      let id=p.getAttribute("channel");
-      if(!epg[id]) epg[id]=[];
-      epg[id].push({
-        start:parseDate(p.getAttribute("start")),
-        stop:parseDate(p.getAttribute("stop")),
-        title:p.querySelector("title")?.textContent||""
-      });
-    });
-  });
-}
-
-function parseDate(s){
-  return new Date(
-    s.substr(0,4),s.substr(4,2)-1,s.substr(6,2),
-    s.substr(8,2),s.substr(10,2)
-  );
-}
-
-/* ===== UI ===== */
-function render(){
-  let q=document.getElementById("search").value.toLowerCase();
-  let cdiv=document.getElementById("channels");
-  cdiv.innerHTML="";
-  canais.filter(c=>c.nome.toLowerCase().includes(q)).forEach(c=>{
-    let d=document.createElement("div");
-    d.className="channel";
-    d.innerHTML=`<img src="${c.logo}"><span>${c.nome}</span>`;
-    d.onclick=()=>play(c);
-    cdiv.appendChild(d);
-  });
-}
-document.getElementById("search").onkeyup=render;
-
-/* ===== PLAYER + EPG ===== */
-function play(c){
-  let v=document.getElementById("video");
-  if(hls) hls.destroy();
-  if(Hls.isSupported()){
-    hls=new Hls();
-    hls.loadSource(c.url);
-    hls.attachMedia(v);
-    hls.on(Hls.Events.MANIFEST_PARSED,()=>v.play());
-  } else {
-    v.src=c.url;
-    v.play();
-  }
-  showEPG(c);
-}
-
-function showEPG(c){
-  let now=new Date();
-  let p=(epg[c.id]||epg[c.nome]||[]).find(p=>now>=p.start&&now<=p.stop);
-
-  let t=document.getElementById("epgTitle");
-  let tm=document.getElementById("epgTime");
-  let f=document.querySelector(".fill");
-
-  if(!p){
-    t.textContent="Sem EPG disponível";
-    tm.textContent="";
-    f.style.width="0%";
-    return;
-  }
-
-  let perc=((now-p.start)/(p.stop-p.start))*100;
-  t.textContent=p.title;
-  tm.textContent=p.start.toLocaleTimeString().slice(0,5)+" - "+p.stop.toLocaleTimeString().slice(0,5);
-  f.style.width=perc+"%";
-}
-</script>
 </body>
 </html>
