@@ -97,21 +97,19 @@
     let hls = new Hls();
     const proxy = "https://corsproxy.io/?";
     
-    // Seu link da lista (tinyurl.com/2yl7bfyv)
+    // Link da lista (tinyurl.com/2yl7bfyv)
     const linkPadrao = "https://tinyurl.com/" + atob("MnhsN2JmeXY=");
-    
-    // NOVO LINK DO SEU SERVIDOR (https://rapaduratec.cc/iptv/guide.xml)
-    const epgUrl = atob("aHR0cHM6Ly9yYXBhZHVyYXRlYy5jYy9pcHR2L2d1aWRlLnhtbA==");
+    // Link do EPG direto do seu servidor
+    const epgUrl = "https://rapaduratec.cc/iptv/guide.xml";
 
-    // INICIALIZAÇÃO
     window.onload = () => {
-        // Carrega EPG
+        // Carrega EPG com tratamento de erro
         fetch(proxy + encodeURIComponent(epgUrl))
             .then(r => r.text())
             .then(xml => {
                 dadosEPG = new DOMParser().parseFromString(xml, "text/xml");
-                console.log("EPG Pronto.");
-            }).catch(e => console.log("Erro EPG"));
+                console.log("EPG Carregado.");
+            }).catch(e => console.log("Erro ao carregar EPG."));
 
         // Carrega Lista salva ou a Padrão
         const salva = localStorage.getItem('amot777_url');
@@ -173,12 +171,15 @@
 
         const filtrados = canaisGlobais.filter(c => c.grupo === grupo);
         const lista = document.getElementById('lista-canais');
+        
+        // Corrigido: removi os <br> que estavam dentro do .map
         lista.innerHTML = filtrados.map(c => `
             <li onclick="playVideo('${c.url}', '${c.nome}', '${c.id}')">
                 <img src="${c.logo}" onerror="this.src='https://via.placeholder.com/40x25?text=TV'">
                 <span>${c.nome}</span>
             </li>
         `).join('');
+        
         if(window.innerWidth < 768) window.scrollTo({top: 0, behavior: 'smooth'});
     }
 
@@ -186,7 +187,7 @@
         const video = document.getElementById('video-player');
         buscarEPG(id, nome);
 
-        // Se o link for HTTP, tenta usar proxy para evitar bloqueio em sites HTTPS
+        // Se o link for HTTP, usa o proxy para evitar bloqueio HTTPS
         const finalUrl = url.startsWith('http:') ? proxy + encodeURIComponent(url) : url;
 
         if (Hls.isSupported()) {
@@ -194,7 +195,9 @@
             hls = new Hls();
             hls.loadSource(finalUrl);
             hls.attachMedia(video);
-            hls.on(Hls.Events.MANIFEST_PARSED, () => video.play().catch(() => {}));
+            hls.on(Hls.Events.MANIFEST_PARSED, () => {
+                video.play().catch(() => console.log("Autoplay bloqueado pelo navegador."));
+            });
         } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
             video.src = finalUrl;
             video.play();
@@ -210,7 +213,7 @@
             const titulo = prog.querySelector('title').textContent;
             box.innerHTML = `Assistindo: <b>${nome}</b><br><span style="color:#007bff">No ar: ${titulo}</span>`;
         } else {
-            box.innerHTML = `Assistindo: <b>${nome}</b><br><small>Sem guia disponível.</small>`;
+            box.innerHTML = `Assistindo: <b>${nome}</b><br><small>Sem guia disponível para este canal.</small>`;
         }
     }
 
@@ -222,7 +225,7 @@
     }
 
     function limparDados() {
-        if(confirm("Limpar cache da lista?")) {
+        if(confirm("Deseja limpar o link salvo?")) {
             localStorage.removeItem('amot777_url');
             location.reload();
         }
@@ -230,4 +233,3 @@
 </script>
 </body>
 </html>
-
