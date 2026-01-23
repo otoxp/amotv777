@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AMOT777 IPTV - Mobile Ready</title>
+    <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
+    <style>
+        :root { --bg: #0f0f0f; --sidebar: #1a1a1a; --accent: #007bff; --text: #ffffff; }
+        body, html { margin: 0; padding: 0; font-family: 'Segoe UI', sans-serif; background: var(--bg); color: var(--text); height: 100%; }
+
+        /* HEADER RESPONSIVO */
+        .header { 
+            display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; 
+            padding: 10px 20px; background: #000; border-bottom: 2px solid #333; 
+        }
+        .controls { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 5px; width: 100%; justify-content: center; }
+        
+        input[type="text"] { 
+            padding: 10px; flex: 1; min-width: 200px; border-radius: 4px; 
+            border: 1px solid #444; background: #222; color: white; 
+        }
+
+        /* LAYOUT PRINCIPAL */
+        .main { display: flex; height: calc(100vh - 120px); flex-direction: row; }
+
+        /* GRUPOS (ESQUERDA) */
+        .sidebar { width: 250px; background: var(--sidebar); border-right: 1px solid #333; overflow-y: auto; }
+        .sidebar h3 { padding: 15px; margin: 0; font-size: 14px; color: var(--accent); border-bottom: 1px solid #333; }
+        .sidebar ul { list-style: none; padding: 0; }
+        .sidebar li { padding: 12px; cursor: pointer; border-bottom: 1px solid #252525; font-size: 14px; }
+        .sidebar li.active { background: var(--accent); font-weight: bold; }
+
+        /* PLAYER E LISTA DE CANAIS */
+        .content { flex: 1; display: grid; grid-template-columns: 1fr 300px; gap: 10px; padding: 10px; overflow: hidden; }
+        .player-side { display: flex; flex-direction: column; gap: 10px; overflow-y: auto; }
+        video { width: 100%; background: #000; border-radius: 8px; aspect-ratio: 16/9; }
+        
+        .epg-container { background: #1a1a1a; padding: 15px; border-radius: 8px; border: 1px solid #333; font-size: 14px; }
+
+        .channels-side { background: #1a1a1a; border-radius: 8px; display: flex; flex-direction: column; border: 1px solid #333; overflow: hidden; }
+        #lista-canais { list-style: none; padding: 0; margin: 0; overflow-y: auto; }
+        #lista-canais li { display: flex; align-items: center; gap: 10px; padding: 10px; border-bottom: 1px solid #252525; cursor: pointer; }
+        #lista-canais img { width: 35px; height: 22px; object-fit: contain; background: #333; }
+
+        .btn { padding: 10px 15px; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; }
+        .btn-url { background: var(--accent); color: white; }
+        .btn-file { background: #444; color: white; }
+
+        /* --- REGRAS PARA TABLET E CELULAR --- */
+        @media (max-width: 1024px) {
+            .content { grid-template-columns: 1fr; } /* Canais vão para baixo do player no Tablet */
+            .channels-side { height: 400px; }
+        }
+
+        @media (max-width: 768px) {
+            .main { flex-direction: column; height: auto; overflow-y: visible; }
+            .sidebar { width: 100%; height: 150px; border-right: none; border-bottom: 1px solid #333; }
+            .sidebar ul { display: flex; overflow-x: auto; }
+            .sidebar li { white-space: nowrap; padding: 15px; border-bottom: none; border-right: 1px solid #252525; }
+            
+            .header { height: auto; justify-content: center; text-align: center; }
+            .logo { width: 100%; margin-bottom: 10px; }
+            
+            .content { padding: 5px; }
+        }
+    </style>
+</head>
+<body>
+
+<header class="header">
+    <div class="logo" style="font-weight: bold; font-size: 1.2rem; color: #007bff;">AMOT777 IPTV</div>
+    <div class="controls">
+        <input type="text" id="url-lista" placeholder="URL da lista M3U...">
+        <button onclick="carregarUrl()" class="btn btn-url">Carregar</button>
+        <label for="file-upload" class="btn btn-file">Arquivo</label>
+        <input type="file" id="file-upload" accept=".m3u,.m3u8" style="display:none" onchange="carregarArquivo(this)">
+    </div>
+</header>
+
+<div class="main">
+    <aside class="sidebar">
+        <h3>GRUPOS</h3>
+        <ul id="lista-grupos"></ul>
+    </aside>
+
+    <main class="content">
+        <div class="player-side">
+            <video id="video-player" controls autoplay playsinline></video>
+            <div class="epg-container">
+                <h4 style="margin:0 0 10px 0">Programação</h4>
+                <div id="epg-content">Selecione um canal para assistir.</div>
+            </div>
+        </div>
+
+        <div class="channels-side">
+            <div style="padding:10px; background:#222;">
+                <input type="text" id="busca" placeholder="Buscar canal..." oninput="filtrarCanais()" style="width:90%">
+            </div>
+            <ul id="lista-canais"></ul>
+        </div>
+    </main>
+</div>
+
+<script>
+    let canaisGlobais = [];
+    let hls = new Hls();
+
+    async function carregarUrl() {
+        const url = document.getElementById('url-lista').value;
+        if(!url) return alert("Insira uma URL!");
+        const proxy = "https://corsproxy.io/?";
+        try {
+            const res = await fetch(proxy + encodeURIComponent(url));
+            const data = await res.text();
+            processarM3U(data);
+        } catch (e) { alert("Erro de conexão/CORS."); }
+    }
+
+    function carregarArquivo(input) {
+        const reader = new FileReader();
+        reader.onload = (e) => processarM3U(e.target.result);
+        reader.readAsText(input.files[0]);
+    }
+
+    function processarM3U(data) {
+        const linhas = data.split('\n');
+        canaisGlobais = [];
+        let grupos = new Set();
+        let tempCanal = {};
+
+        linhas.forEach(linha => {
+            if (linha.startsWith('#EXTINF')) {
+                tempCanal = {};
+                tempCanal.nome = linha.split(',')[1]?.trim() || "Sem nome";
+                tempCanal.grupo = linha.match(/group-title="([^"]+)"/)?.[1] || "Geral";
+                tempCanal.logo = linha.match(/tvg-logo="([^"]+)"/)?.[1] || "";
+                grupos.add(tempCanal.grupo);
+            } else if (linha.startsWith('http')) {
+                tempCanal.url = linha.trim();
+                if(tempCanal.nome) canaisGlobais.push(tempCanal);
+            }
+        });
+
+        exibirGrupos(Array.from(grupos).sort());
+    }
+
+    function exibirGrupos(grupos) {
+        const lista = document.getElementById('lista-grupos');
+        lista.innerHTML = grupos.map(g => `<li onclick="exibirCanais('${g}')">${g}</li>`).join('');
+    }
+
+    function exibirCanais(grupo) {
+        const filtrados = canaisGlobais.filter(c => c.grupo === grupo);
+        const lista = document.getElementById('lista-canais');
+        lista.innerHTML = filtrados.map(c => `
+            <li onclick="playVideo('${c.url}', '${c.nome}')">
+                <img src="${c.logo}" onerror="this.src='https://via.placeholder.com/40x25?text=TV'">
+                <span>${c.nome}</span>
+            </li>
+        `).join('');
+        // No mobile, após selecionar o grupo, rolar para o player
+        if(window.innerWidth < 768) window.scrollTo({top: 0, behavior: 'smooth'});
+    }
+
+    function playVideo(url, nome) {
+        const video = document.getElementById('video-player');
+        document.getElementById('epg-content').innerHTML = `Assistindo: <b>${nome}</b>`;
+        if (Hls.isSupported()) {
+            hls.destroy();
+            hls = new Hls();
+            hls.loadSource(url);
+            hls.attachMedia(video);
+            hls.on(Hls.Events.MANIFEST_PARSED, () => video.play());
+        } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
+            video.src = url;
+            video.play();
+        }
+    }
+
+    function filtrarCanais() {
+        const termo = document.getElementById('busca').value.toLowerCase();
+        const itens = document.querySelectorAll('#lista-canais li');
+        itens.forEach(item => {
+            item.style.display = item.innerText.toLowerCase().includes(termo) ? "flex" : "none";
+        });
+    }
+</script>
+</body>
+</html>
