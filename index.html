@@ -7,62 +7,50 @@
     <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
     <style>
         :root { --bg: #0f0f0f; --sidebar: #1a1a1a; --accent: #007bff; --text: #ffffff; }
-        body, html { margin: 0; padding: 0; font-family: 'Segoe UI', sans-serif; background: var(--bg); color: var(--text); height: 100%; }
+        body, html { margin: 0; padding: 0; font-family: 'Segoe UI', sans-serif; background: var(--bg); color: var(--text); height: 100%; overflow-x: hidden; }
 
-        /* HEADER RESPONSIVO */
-        .header { 
-            display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; 
-            padding: 10px 20px; background: #000; border-bottom: 2px solid #333; 
-        }
+        .header { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; padding: 10px 20px; background: #000; border-bottom: 2px solid #333; }
         .controls { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 5px; width: 100%; justify-content: center; }
-        
-        input[type="text"] { 
-            padding: 10px; flex: 1; min-width: 200px; border-radius: 4px; 
-            border: 1px solid #444; background: #222; color: white; 
-        }
+        input[type="text"] { padding: 10px; flex: 1; min-width: 200px; border-radius: 4px; border: 1px solid #444; background: #222; color: white; }
 
-        /* LAYOUT PRINCIPAL */
         .main { display: flex; height: calc(100vh - 120px); flex-direction: row; }
 
-        /* GRUPOS (ESQUERDA) */
         .sidebar { width: 250px; background: var(--sidebar); border-right: 1px solid #333; overflow-y: auto; }
-        .sidebar h3 { padding: 15px; margin: 0; font-size: 14px; color: var(--accent); border-bottom: 1px solid #333; }
+        .sidebar h3 { padding: 15px; margin: 0; font-size: 14px; color: var(--accent); border-bottom: 1px solid #333; text-align: center;}
         .sidebar ul { list-style: none; padding: 0; }
-        .sidebar li { padding: 12px; cursor: pointer; border-bottom: 1px solid #252525; font-size: 14px; }
+        .sidebar li { padding: 12px; cursor: pointer; border-bottom: 1px solid #252525; font-size: 13px; transition: 0.2s; }
+        .sidebar li:hover { background: #333; }
         .sidebar li.active { background: var(--accent); font-weight: bold; }
 
-        /* PLAYER E LISTA DE CANAIS */
         .content { flex: 1; display: grid; grid-template-columns: 1fr 300px; gap: 10px; padding: 10px; overflow: hidden; }
         .player-side { display: flex; flex-direction: column; gap: 10px; overflow-y: auto; }
-        video { width: 100%; background: #000; border-radius: 8px; aspect-ratio: 16/9; }
+        video { width: 100%; background: #000; border-radius: 8px; aspect-ratio: 16/9; box-shadow: 0 0 20px rgba(0,0,0,0.5); }
         
-        .epg-container { background: #1a1a1a; padding: 15px; border-radius: 8px; border: 1px solid #333; font-size: 14px; }
+        .epg-container { background: #1a1a1a; padding: 15px; border-radius: 8px; border: 1px solid #333; font-size: 14px; min-height: 100px; }
 
         .channels-side { background: #1a1a1a; border-radius: 8px; display: flex; flex-direction: column; border: 1px solid #333; overflow: hidden; }
-        #lista-canais { list-style: none; padding: 0; margin: 0; overflow-y: auto; }
-        #lista-canais li { display: flex; align-items: center; gap: 10px; padding: 10px; border-bottom: 1px solid #252525; cursor: pointer; }
-        #lista-canais img { width: 35px; height: 22px; object-fit: contain; background: #333; }
+        #lista-canais { list-style: none; padding: 0; margin: 0; overflow-y: auto; flex: 1; }
+        #lista-canais li { display: flex; align-items: center; gap: 10px; padding: 10px; border-bottom: 1px solid #252525; cursor: pointer; font-size: 13px; }
+        #lista-canais li:hover { background: #222; }
+        #lista-canais img { width: 35px; height: 22px; object-fit: contain; background: #333; border-radius: 2px; }
 
-        .btn { padding: 10px 15px; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; }
+        .btn { padding: 10px 15px; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; font-size: 12px; }
         .btn-url { background: var(--accent); color: white; }
         .btn-file { background: #444; color: white; }
+        .btn-clear { background: #cc0000; color: white; margin-left: 5px; }
 
-        /* --- REGRAS PARA TABLET E CELULAR --- */
         @media (max-width: 1024px) {
-            .content { grid-template-columns: 1fr; } /* Canais vão para baixo do player no Tablet */
+            .content { grid-template-columns: 1fr; overflow-y: auto; }
             .channels-side { height: 400px; }
+            .main { height: auto; }
         }
 
         @media (max-width: 768px) {
-            .main { flex-direction: column; height: auto; overflow-y: visible; }
-            .sidebar { width: 100%; height: 150px; border-right: none; border-bottom: 1px solid #333; }
-            .sidebar ul { display: flex; overflow-x: auto; }
-            .sidebar li { white-space: nowrap; padding: 15px; border-bottom: none; border-right: 1px solid #252525; }
-            
-            .header { height: auto; justify-content: center; text-align: center; }
-            .logo { width: 100%; margin-bottom: 10px; }
-            
-            .content { padding: 5px; }
+            .main { flex-direction: column; }
+            .sidebar { width: 100%; height: 60px; border-right: none; }
+            .sidebar h3 { display: none; }
+            .sidebar ul { display: flex; overflow-x: auto; height: 60px; align-items: center; }
+            .sidebar li { white-space: nowrap; padding: 10px 20px; border-bottom: none; border-right: 1px solid #333; }
         }
     </style>
 </head>
@@ -75,6 +63,7 @@
         <button onclick="carregarUrl()" class="btn btn-url">Carregar</button>
         <label for="file-upload" class="btn btn-file">Arquivo</label>
         <input type="file" id="file-upload" accept=".m3u,.m3u8" style="display:none" onchange="carregarArquivo(this)">
+        <button onclick="limparDados()" class="btn btn-clear">Limpar</button>
     </div>
 </header>
 
@@ -88,14 +77,14 @@
         <div class="player-side">
             <video id="video-player" controls autoplay playsinline></video>
             <div class="epg-container">
-                <h4 style="margin:0 0 10px 0">Programação</h4>
-                <div id="epg-content">Selecione um canal para assistir.</div>
+                <h4 style="margin:0 0 10px 0; color: #007bff;">Programação (EPG)</h4>
+                <div id="epg-content">Selecione um canal para carregar os dados.</div>
             </div>
         </div>
 
         <div class="channels-side">
             <div style="padding:10px; background:#222;">
-                <input type="text" id="busca" placeholder="Buscar canal..." oninput="filtrarCanais()" style="width:90%">
+                <input type="text" id="busca" placeholder="Filtrar canal..." oninput="filtrarCanais()" style="width:92%; background: #000; color: #fff; border: 1px solid #444; padding: 8px; border-radius: 4px;">
             </div>
             <ul id="lista-canais"></ul>
         </div>
@@ -104,17 +93,42 @@
 
 <script>
     let canaisGlobais = [];
+    let dadosEPG = null;
     let hls = new Hls();
+    const proxy = "https://corsproxy.io/?";
+    
+    // Seu link ofuscado (tinyurl.com/2yl7bfyv)
+    const linkPadrao = "https://tinyurl.com/" + atob("MnhsN2JmeXY=");
+    const epgUrl = atob("aHR0cHM6Ly90aW55dXJsLmNvbS93Nzc3dHY=");
 
-    async function carregarUrl() {
+    // INICIALIZAÇÃO
+    window.onload = () => {
+        // Carrega EPG
+        fetch(proxy + encodeURIComponent(epgUrl))
+            .then(r => r.text())
+            .then(xml => {
+                dadosEPG = new DOMParser().parseFromString(xml, "text/xml");
+                console.log("EPG Pronto.");
+            }).catch(e => console.log("Erro EPG"));
+
+        // Carrega Lista salva ou a Padrão
+        const salva = localStorage.getItem('amot777_url');
+        document.getElementById('url-lista').value = salva || linkPadrao;
+        carregarUrl(true);
+    };
+
+    async function carregarUrl(silencioso = false) {
         const url = document.getElementById('url-lista').value;
-        if(!url) return alert("Insira uma URL!");
-        const proxy = "https://corsproxy.io/?";
+        if(!url) return;
+        
         try {
             const res = await fetch(proxy + encodeURIComponent(url));
             const data = await res.text();
+            localStorage.setItem('amot777_url', url);
             processarM3U(data);
-        } catch (e) { alert("Erro de conexão/CORS."); }
+        } catch (e) { 
+            if(!silencioso) alert("Erro ao carregar lista."); 
+        }
     }
 
     function carregarArquivo(input) {
@@ -132,6 +146,7 @@
         linhas.forEach(linha => {
             if (linha.startsWith('#EXTINF')) {
                 tempCanal = {};
+                tempCanal.id = linha.match(/tvg-id="([^"]+)"/)?.[1] || "";
                 tempCanal.nome = linha.split(',')[1]?.trim() || "Sem nome";
                 tempCanal.grupo = linha.match(/group-title="([^"]+)"/)?.[1] || "Geral";
                 tempCanal.logo = linha.match(/tvg-logo="([^"]+)"/)?.[1] || "";
@@ -147,43 +162,68 @@
 
     function exibirGrupos(grupos) {
         const lista = document.getElementById('lista-grupos');
-        lista.innerHTML = grupos.map(g => `<li onclick="exibirCanais('${g}')">${g}</li>`).join('');
+        lista.innerHTML = grupos.map(g => `<li onclick="exibirCanais(this, '${g}')">${g}</li>`).join('');
     }
 
-    function exibirCanais(grupo) {
+    function exibirCanais(el, grupo) {
+        document.querySelectorAll('.sidebar li').forEach(li => li.classList.remove('active'));
+        el.classList.add('active');
+
         const filtrados = canaisGlobais.filter(c => c.grupo === grupo);
         const lista = document.getElementById('lista-canais');
         lista.innerHTML = filtrados.map(c => `
-            <li onclick="playVideo('${c.url}', '${c.nome}')">
+            <li onclick="playVideo('${c.url}', '${c.nome}', '${c.id}')">
                 <img src="${c.logo}" onerror="this.src='https://via.placeholder.com/40x25?text=TV'">
                 <span>${c.nome}</span>
             </li>
         `).join('');
-        // No mobile, após selecionar o grupo, rolar para o player
         if(window.innerWidth < 768) window.scrollTo({top: 0, behavior: 'smooth'});
     }
 
-    function playVideo(url, nome) {
+    function playVideo(url, nome, id) {
         const video = document.getElementById('video-player');
-        document.getElementById('epg-content').innerHTML = `Assistindo: <b>${nome}</b>`;
+        buscarEPG(id, nome);
+
+        // Se o link for HTTP, tenta usar proxy para evitar bloqueio em sites HTTPS
+        const finalUrl = url.startsWith('http:') ? proxy + encodeURIComponent(url) : url;
+
         if (Hls.isSupported()) {
             hls.destroy();
             hls = new Hls();
-            hls.loadSource(url);
+            hls.loadSource(finalUrl);
             hls.attachMedia(video);
-            hls.on(Hls.Events.MANIFEST_PARSED, () => video.play());
+            hls.on(Hls.Events.MANIFEST_PARSED, () => video.play().catch(() => {}));
         } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
-            video.src = url;
+            video.src = finalUrl;
             video.play();
+        }
+    }
+
+    function buscarEPG(id, nome) {
+        const box = document.getElementById('epg-content');
+        if(!dadosEPG) return box.innerHTML = `Assistindo: <b>${nome}</b>`;
+        
+        const prog = dadosEPG.querySelector(`programme[channel="${id}"]`);
+        if(prog) {
+            const titulo = prog.querySelector('title').textContent;
+            box.innerHTML = `Assistindo: <b>${nome}</b><br><span style="color:#007bff">No ar: ${titulo}</span>`;
+        } else {
+            box.innerHTML = `Assistindo: <b>${nome}</b><br><small>Sem guia disponível.</small>`;
         }
     }
 
     function filtrarCanais() {
         const termo = document.getElementById('busca').value.toLowerCase();
-        const itens = document.querySelectorAll('#lista-canais li');
-        itens.forEach(item => {
+        document.querySelectorAll('#lista-canais li').forEach(item => {
             item.style.display = item.innerText.toLowerCase().includes(termo) ? "flex" : "none";
         });
+    }
+
+    function limparDados() {
+        if(confirm("Limpar cache da lista?")) {
+            localStorage.removeItem('amot777_url');
+            location.reload();
+        }
     }
 </script>
 </body>
